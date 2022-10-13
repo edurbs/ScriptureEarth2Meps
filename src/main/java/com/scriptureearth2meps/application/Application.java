@@ -24,9 +24,6 @@ import org.springframework.scheduling.annotation.EnableAsync;
 @Push
 public class Application implements AppShellConfigurator {
 
-    /**
-	 * 
-	 */
 	private static final long serialVersionUID = 1L;
 
 	public static void main(String[] args) {

@@ -16,7 +16,9 @@ import com.scriptureearth2meps.model.Book;
 import com.scriptureearth2meps.model.BookName;
 import com.scriptureearth2meps.model.Footnote;
 
-public class ParsePage {
+public class ParsePage   {
+	
+
 	private StringBuilder stringHtml = new StringBuilder();
 	private List<Footnote> footnotes = new ArrayList<>();
 	private String javaScriptFootnotes = null;
@@ -116,7 +118,7 @@ public class ParsePage {
 			if (verse.text().contains("-")) { // united verses
 				String[] unitedVerses = verse.text().split("-");
 				
-				int diff = Integer.parseInt(unitedVerses[1]) - Integer.parseInt(unitedVerses[0]);				
+				int diff = Integer.parseInt(unitedVerses[1].replace("[^\\d.]", "")) - Integer.parseInt(unitedVerses[0].replace("[^\\d.]", ""));				
 				lastVerse += diff; 					
 				
 

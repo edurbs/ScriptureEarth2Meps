@@ -2,10 +2,12 @@ package com.scriptureearth2meps.report;
 
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
+import java.io.Serializable;
 
 import com.scriptureearth2meps.model.Book;
 
-public class PrintResult {
+public class PrintResult   {
+	
 	private Book book;
 	private String format;
 	public Book getBook() {

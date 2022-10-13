@@ -7,14 +7,13 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Type;
+import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -34,16 +33,13 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.scheduling.annotation.Async;
-import org.springframework.scheduling.annotation.AsyncResult;
-import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.stereotype.Service;
-import org.springframework.util.concurrent.ListenableFuture;
 
 @Service
-public class BibleSetup {
+public class BibleSetup  {
 
+	
 	private String languageCode;
 	private String bibleCode;
 	private String wordSee;
@@ -52,19 +48,37 @@ public class BibleSetup {
 	private String chapterUrl;
 	private float counter;
 	private float somaTotalChapters;
-
+	private boolean oldStyleBible;
 	private List<Language> languageList = new ArrayList<>();
 	private List<Bible> bibleList = new ArrayList<>();
 	private List<Book> bookList = new ArrayList<>();
 	private List<String> fileList = new ArrayList<>();
 
 	private volatile boolean shouldStop = false;
+	
+	private String outputZipFileName;
 
 	public BibleSetup() throws IOException {
 		// parse the site ScriptEarth for the language list only once
 		if (languageList.size() == 0) {
 			makeLanguageList();
 		}
+	}
+	
+	public void setOldStyleBible(boolean oldStyleBible) {
+		this.oldStyleBible = oldStyleBible;
+	}
+	
+	public boolean getOldStyleBible() {
+		return this.oldStyleBible;		
+	}
+	
+	public void setOutputZipFileName(String outputZipFileName) {
+		this.outputZipFileName = outputZipFileName;
+	}
+	
+	public String getOutputZipFileName() {
+		return outputZipFileName;
 	}
 
 	public void setShouldStop(boolean shouldStop) {
@@ -168,7 +182,7 @@ public class BibleSetup {
 		if (qtBibles > 1) { // if the language has more then 1 bible
 			moreBibles = true;
 			setBibleCode(null);
-			// makeBibleList();
+
 		} else {
 			moreBibles = false;
 			setBibleCode(getLanguageCode()); // default equais the language code
@@ -202,13 +216,23 @@ public class BibleSetup {
 	/**
 	 * create the list of languages avaiable at
 	 * https://www.scriptureearth.org/data/language/sab/
+	 * @return 
 	 * 
 	 * @throws IOException
 	 */
 	public void makeBibleList() throws IOException, MalformedURLException {
 		bibleList.clear();
-
+		setOldStyleBible(false);
+		
 		String url = "https://www.scriptureearth.org/data/" + this.getLanguageCode() + "/sab/";
+		
+		URL u = new URL (url);
+		HttpURLConnection huc =  (HttpURLConnection)  u.openConnection(); 
+	    huc.setRequestMethod("GET"); 
+	    huc.connect(); 
+	    if(huc.getResponseCode()!=200) {
+	    	return;
+	    };
 
 		Document bibleListPage = Jsoup.connect(url).get();
 
@@ -218,10 +242,17 @@ public class BibleSetup {
 		if (hrefElements != null) {
 
 			for (Element element : hrefElements) {
+				
+				if(element.text().endsWith(".html")){					
+					// old style web Bible, and just one Bible
+					setOldStyleBible(true);
+					bibleList.add(new Bible(this.getLanguageCode()));
+					return;
+				}				
 				bibleList.add(new Bible(element.text().substring(0, 4)));
-
 			}
 		}
+		
 
 	}
 
@@ -233,33 +264,56 @@ public class BibleSetup {
 
 	private void makeBookList() throws Exception {
 
-		// TODO make book list First, and later the parsing
+
 
 		// <script type="text/javascript" src="js/book-names.js"></script>
 		// https://www.scriptureearth.org/data/xav/sab/xav/js/book-names.js
+		// https://www.scriptureearth.org/data/aaz/sab/js/book-names.js  (oldStyle)
 
 		// get the javascript File
-		URL urlBooks = new URL("https://www.scriptureearth.org/data/" + getLanguageCode() + "/sab/" + getBibleCode()
-				+ "/js/book-names.js");
+		URL urlBooks = null;
+		if(getOldStyleBible()) {
+			urlBooks = new URL("https://www.scriptureearth.org/data/" + getLanguageCode() + "/sab/js/book-names.js");
+		}else {
+			urlBooks = new URL("https://www.scriptureearth.org/data/" + getLanguageCode() + "/sab/" + getBibleCode()
+			+ "/js/book-names.js");
+		}
+		
+		// TODO error with AAZ
+		
+		System.out.println(urlBooks.toString());
+		
 		String jsonBooks = null;
 		try (InputStream in = urlBooks.openStream()) {
 			jsonBooks = new String(in.readAllBytes(), StandardCharsets.UTF_8);
 		}
 
 		// fix the javascript file
-		jsonBooks = jsonBooks.substring(11, jsonBooks.length() - 5);
+		int lastComma = jsonBooks.lastIndexOf(",");
+		//jsonBooks = jsonBooks.substring(11, jsonBooks.length() - 5);
+		jsonBooks = jsonBooks.substring(11, lastComma);
+		
+		
 		jsonBooks = jsonBooks + "\n]";
 		jsonBooks = jsonBooks.replaceAll("name", "\"name\"");
 		jsonBooks = jsonBooks.replaceAll("ref", "\"ref\"");
+		System.out.println(jsonBooks);
 
 		Type listType = new TypeToken<ArrayList<JsonBook>>() {
 		}.getType();
 		ArrayList<JsonBook> jsonBooksList = new Gson().fromJson(jsonBooks, listType);
 
 		for (JsonBook jsonBook : jsonBooksList) {
-
-			String urlBook = "https://www.scriptureearth.org/data/" + getLanguageCode() + "/sab/" + getBibleCode() + "/"
-					+ jsonBook.getRef();
+			
+			String urlBook;
+			if(getOldStyleBible()) {
+				urlBook = "https://www.scriptureearth.org/data/" + getLanguageCode() + "/sab/"
+						+ jsonBook.getRef();
+			}else {
+				urlBook = "https://www.scriptureearth.org/data/" + getLanguageCode() + "/sab/" + getBibleCode() + "/"
+						+ jsonBook.getRef();
+			}
+			
 
 			// get the book name from site
 			String nameScriptureEarth = urlBook.substring(urlBook.length() - 12, urlBook.length() - 9);
@@ -282,15 +336,8 @@ public class BibleSetup {
 			Book book = new Book(BookName.valueOf("T_" + nameScriptureEarth.toUpperCase()), urlBook);
 			book.setTotalChapters(bookTotalChapters);
 
-			// System.out.println("*******Formating Book: " + book.getNameMeps());
-
-			// List<Chapter> chapterList = makeChaptersList(book);
-
-			// book.setChapters(chapterList);
-
 			bookList.add(book);
 
-			// createZip();
 		}
 
 	}
@@ -301,7 +348,7 @@ public class BibleSetup {
 	// succeededListener) throws Exception {
 	@Async
 	public void process(Consumer<Float> progressListener, Runnable succeededListener) throws Exception {
-
+		this.outputZipFileName=null;
 		makeBookList();
 
 		for (Book book : getBookList()) {
@@ -318,7 +365,7 @@ public class BibleSetup {
 
 				this.setChapterUrl(book.getUrl());
 
-				while (!chapterUrl.isEmpty() && !shouldStop) {
+				while (!chapterUrl.isEmpty() && !shouldStop) { // TODO cancel does not show the download button
 
 					System.out.println("Formating Chapter: " + chapterUrl);
 
@@ -398,8 +445,14 @@ public class BibleSetup {
 				}
 				this.fileList.add(fileName);
 			}
-
-			// return chapterList;
+			
+			try {
+				createZip();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
 			succeededListener.run();
 
 		}).start();
@@ -407,12 +460,13 @@ public class BibleSetup {
 	}
 
 	public void createZip() throws IOException {
-		String outputZipFileName = "C:\\Users\\edurb\\Downloads\\sbi" + Calendar.DAY_OF_YEAR + Calendar.HOUR_OF_DAY
+		this.outputZipFileName = "sbi_" + Calendar.DAY_OF_YEAR + Calendar.HOUR_OF_DAY
 				+ Calendar.MINUTE + Calendar.SECOND + "_" + this.getBibleCode() + ".zip";
 
 		// create a ZipOutputStream object
 		FileOutputStream fos = new FileOutputStream(outputZipFileName);
 		ZipOutputStream zos = new ZipOutputStream(fos);
+		this.fileList.clear();
 
 		for (String file : this.fileList) {
 
