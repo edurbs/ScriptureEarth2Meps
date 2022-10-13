@@ -2,6 +2,8 @@ package com.scriptureearth2meps.application.views;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 
 import org.springframework.util.concurrent.ListenableFuture;
@@ -52,7 +54,8 @@ public class WebView extends HorizontalLayout {
 	private Div progressBarSubLabel = new Div();
 	private ProgressBar progressBar = new ProgressBar();
 	private Button button;
-	private Button cancelButton = new Button("Cancel task execution");
+	private Button cancelButton = new Button("Cancel formatting");
+	Notification notification = new Notification();
 
 	public WebView() {
 
@@ -135,20 +138,26 @@ public class WebView extends HorizontalLayout {
 	}
 
 	private void onClick() throws Exception {
-		if (wordSee.getValue() != null && glotal.getValue() != null && comboLanguages.getValue() != null
-				&& (comboBibles.getValue() != null || bibleSetup.getBibleCode() != null)) {
+		if (!wordSee.getValue().isBlank() && !glotal.getValue().isBlank() && comboLanguages.getValue() != null
+				) {
 
-			bibleSetup.setGlotal(glotal.getValue());
-			bibleSetup.setWordSee(wordSee.getValue());
-
-			if (comboBibles.getValue() != null) {
+			//&& (comboBibles.getValue() != null || bibleSetup.getBibleCode() != null)
+			if (comboBibles.getValue() == null && bibleSetup.hasMoreBibles()) {				
+				Notification.show("Choose a Bible");
+				return;
+			}
+			if (comboBibles.getValue() != null && bibleSetup.hasMoreBibles()) {
 				bibleSetup.setBibleCode(comboBibles.getValue().getBible());
 			}
-
-			if (bibleSetup.getBibleCode() == null) {
-				bibleSetup.setBibleCode(bibleSetup.getLanguageCode());
+			if (bibleSetup.getBibleCode() == null && !bibleSetup.hasMoreBibles()) {
+				bibleSetup.setBibleCode(bibleSetup.getLanguageCode()); 
 			}
-
+			
+			
+			bibleSetup.setWordSee(wordSee.getValue());
+			bibleSetup.setGlotal(glotal.getValue());
+			bibleSetup.setLanguageCode(comboLanguages.getValue().getLanguage());
+			
 			// UI ui = button.getUI().orElseThrow();
 			progressBar.setVisible(true);
 			progressBarLabel.setVisible(true);
@@ -157,8 +166,18 @@ public class WebView extends HorizontalLayout {
 
 			progressBarLabel.setText("Formating... please wait some minutes");
 
-			// Consumer<String> progressListener, Runnable succeededListener
+			// final ExecutorService executorService = Executors.newSingleThreadExecutor();
+
 			bibleSetup.process(this::processingUpdated, this::processingSucceeded);
+			// ListenableFuture<String> future = bibleSetup.process(this::processingUpdated,
+			// this::processingSucceeded);
+
+			cancelButton.addClickListener(e -> {
+				// bibleSetup.get.cancel(true);
+				bibleSetup.setShouldStop(true);
+
+				Notification.show("Cancelled!");
+			});
 
 		} else {
 			showMessage("Fill the form!");
@@ -178,9 +197,9 @@ public class WebView extends HorizontalLayout {
 	private void processingSucceeded() {
 		this.getUI().orElseThrow().access(() -> {
 			progressBar.setVisible(false);
-
 			progressBarLabel.setVisible(false);
 			progressBarSubLabel.setVisible(false);
+			cancelButton.setVisible(false);
 			Notification.show("Done!");
 		});
 	}
@@ -192,49 +211,48 @@ public class WebView extends HorizontalLayout {
 	 */
 
 	private void showComboBible() throws IOException {
-
-		if (!comboLanguages.getValue().getLanguage().equals(bibleSetup.getLanguageCode())) {
-			bibleSetup.setLanguageCode(comboLanguages.getValue().getLanguage());
-			if (!bibleSetup.verifyWebBible()) {
-				showMessage("This language " + bibleSetup.getLanguageCode() + " does not have the Bible web page ");
-			} else {
-				if (bibleSetup.hasMoreBibles()) {
-					showMessage("This language " + bibleSetup.getLanguageCode() + " have more than one Bible");
-					Collection<Bible> bibleList = bibleSetup.getBibleList();
-					comboBibles.setItems(bibleList);
-					comboBibles.setItemLabelGenerator(Bible::getBible);
-					comboBibles.setPlaceholder("No language selected");
-					comboBibles.setVisible(true);
+		if (comboLanguages.getValue() != null) {
+			if (!comboLanguages.getValue().getLanguage().equals(bibleSetup.getLanguageCode())) {
+				bibleSetup.setLanguageCode(comboLanguages.getValue().getLanguage());
+				if (!bibleSetup.verifyWebBible()) {
+					showMessage("This language " + bibleSetup.getLanguageCode() + " does not have the Bible web page. Choose other.");
 				} else {
-					bibleSetup.setBibleCode(bibleSetup.getLanguageCode());
-					comboBibles.setVisible(false);
+					if (bibleSetup.hasMoreBibles()) {
+						showMessage("This language " + bibleSetup.getLanguageCode() + " have more than one Bible. Choose one.");
+						Collection<Bible> bibleList = bibleSetup.getBibleList();
+						comboBibles.setItems(bibleList);
+						comboBibles.setItemLabelGenerator(Bible::getBible);
+						comboBibles.setPlaceholder("No language selected");
+						comboBibles.setVisible(true);
+					} else {
+						bibleSetup.setBibleCode(bibleSetup.getLanguageCode());
+						comboBibles.setVisible(false);
+					}
 				}
 			}
 		}
-
 	}
 
 	private void showMessage(String msg) {
 		// System.out.println(msg);
-		Notification notification = new Notification();
-		notification.setDuration(3000);
-		notification.setPosition(Position.BOTTOM_CENTER);
-		notification.addThemeVariants(NotificationVariant.LUMO_ERROR);
-
-		Div text = new Div(new Text(msg));
-
-		Button closeButton = new Button(new Icon("lumo", "cross"));
-		closeButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY_INLINE);
-		closeButton.getElement().setAttribute("aria-label", "Close");
-		closeButton.addClickListener(event -> {
-			notification.close();
-		});
-
-		HorizontalLayout layout = new HorizontalLayout(text, closeButton);
-		layout.setAlignItems(Alignment.CENTER);
-
-		notification.add(layout);
-		notification.open();
+		/*
+		 * notification.setDuration(3000);
+		 * notification.setPosition(Position.BOTTOM_CENTER);
+		 * notification.addThemeVariants(NotificationVariant.LUMO_ERROR);
+		 * 
+		 * Div text = new Div(new Text(msg));
+		 * 
+		 * Button closeButton = new Button(new Icon("lumo", "cross"));
+		 * closeButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY_INLINE);
+		 * closeButton.getElement().setAttribute("aria-label", "Close");
+		 * closeButton.addClickListener(event -> { notification.close(); });
+		 * 
+		 * HorizontalLayout layout = new HorizontalLayout(text, closeButton);
+		 * layout.setAlignItems(Alignment.CENTER);
+		 * 
+		 * notification.add(layout); notification.open();
+		 */
+		Notification.show(msg);
 	}
 
 	private void showError(Exception e) {

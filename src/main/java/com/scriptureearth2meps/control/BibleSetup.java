@@ -13,6 +13,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -50,16 +52,23 @@ public class BibleSetup {
 	private String chapterUrl;
 	private float counter;
 	private float somaTotalChapters;
+
 	private List<Language> languageList = new ArrayList<>();
 	private List<Bible> bibleList = new ArrayList<>();
 	private List<Book> bookList = new ArrayList<>();
 	private List<String> fileList = new ArrayList<>();
+
+	private volatile boolean shouldStop = false;
 
 	public BibleSetup() throws IOException {
 		// parse the site ScriptEarth for the language list only once
 		if (languageList.size() == 0) {
 			makeLanguageList();
 		}
+	}
+
+	public void setShouldStop(boolean shouldStop) {
+		this.shouldStop = shouldStop;
 	}
 
 	public void setCounter(float counter) {
@@ -288,13 +297,18 @@ public class BibleSetup {
 
 	// private List<Chapter> makeChaptersList(Book book) throws Exception {
 	// private ListenableFuture<String> makeChaptersList() throws Exception {
+	// public void process(Consumer<Float> progressListener, Runnable
+	// succeededListener) throws Exception {
 	@Async
 	public void process(Consumer<Float> progressListener, Runnable succeededListener) throws Exception {
+
 		makeBookList();
 
 		for (Book book : getBookList()) {
 			somaTotalChapters += book.getTotalChapters();
 		}
+
+		// while (!Thread.currentThread().isInterrupted()) {
 
 		new Thread(() -> {
 
@@ -302,12 +316,11 @@ public class BibleSetup {
 
 				List<Chapter> chapterList = new ArrayList<>();
 
-				this.setChapterUrl( book.getUrl());
-				
+				this.setChapterUrl(book.getUrl());
 
-				while (!chapterUrl.isEmpty()) {
+				while (!chapterUrl.isEmpty() && !shouldStop) {
 
-					// System.out.println("Formating Chapter: " + chapterUrl);
+					System.out.println("Formating Chapter: " + chapterUrl);
 
 					counter++;
 
@@ -388,6 +401,7 @@ public class BibleSetup {
 
 			// return chapterList;
 			succeededListener.run();
+
 		}).start();
 
 	}
