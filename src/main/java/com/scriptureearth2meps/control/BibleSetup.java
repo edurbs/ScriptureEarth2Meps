@@ -460,7 +460,7 @@ public class BibleSetup  {
 	}
 
 	public void createZip() throws IOException {
-		this.outputZipFileName = "sbi_" + Calendar.DAY_OF_YEAR + Calendar.HOUR_OF_DAY
+		this.outputZipFileName = "\\frontend\\temp\\sbi_" + Calendar.DAY_OF_YEAR + Calendar.HOUR_OF_DAY
 				+ Calendar.MINUTE + Calendar.SECOND + "_" + this.getBibleCode() + ".zip";
 
 		// create a ZipOutputStream object
