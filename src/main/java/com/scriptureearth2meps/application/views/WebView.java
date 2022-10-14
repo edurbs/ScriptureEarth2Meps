@@ -46,12 +46,12 @@ public class WebView extends HorizontalLayout {
 	private Div progressBarLabel = new Div();
 	private Div progressBarSubLabel = new Div();
 	private ProgressBar progressBar = new ProgressBar();
-	
+
 	private Button cancelButton = new Button("Cancel formatting");
 	private Notification notification = new Notification();
 	private TextArea textArea = new TextArea("Instruction",
 			"Download the zip file and start with the Step 3 of PPD: Convert Bible Documents to MEPS Open each html file with Microsoft Word and save it as Meps Listing file .mps");
-	
+
 	private Div divDownload = new Div();
 	private Button buttonStart = new Button("Start");
 	private FormLayout formLayout = new FormLayout();
@@ -88,13 +88,11 @@ public class WebView extends HorizontalLayout {
 		comboBibles.setLabel("Select a Bible");
 		comboBibles.setVisible(false);
 
-		
 		formLayout.add(wordSee, glotal, comboLanguages, comboBibles);
 		formLayout.setResponsiveSteps(new ResponsiveStep("0", 1), new ResponsiveStep("500px", 2));
 		formLayout.setSizeFull();
 
 		div.add(formLayout);
-		
 
 		buttonStart.addClickListener(e -> {
 			try {
@@ -111,7 +109,6 @@ public class WebView extends HorizontalLayout {
 		progressBar.setMin(0);
 		progressBar.setMax(100);
 		progressBar.setValue(0);
-		
 
 		progressBar.setVisible(false);
 		cancelButton.setVisible(false);
@@ -124,12 +121,12 @@ public class WebView extends HorizontalLayout {
 		div.add(progressBarLabel, progressBar, progressBarSubLabel, cancelButton);
 
 		divDownload.add(textArea);
-		//divDownload.add(buttonDownload);
+		// divDownload.add(buttonDownload);
 
 		div.add(divDownload);
 		divDownload.setVisible(false);
 
-		add(div);		
+		add(div);
 
 		setSizeFull();
 		setHeightFull();
@@ -144,17 +141,15 @@ public class WebView extends HorizontalLayout {
 	private void onClick() throws Exception {
 		divDownload.setVisible(false);
 		if (!wordSee.getValue().isBlank() && !glotal.getValue().isBlank() && comboLanguages.getValue() != null) {
-			
+
 			if (!bibleSetup.verifyWebBible()) {
 				showMessage("This language " + bibleSetup.getLanguageCode()
 						+ " does not have the Bible web page. Choose other.");
 				return;
-			} 
-				
+			}
 
 			if (comboBibles.getValue() == null && bibleSetup.hasMoreBibles()) {
-				showMessage("This language " + bibleSetup.getLanguageCode()
-				+ " have more than one Bible. Choose one.");
+				showMessage("This language " + bibleSetup.getLanguageCode() + " have more than one Bible. Choose one.");
 				return;
 			}
 			if (comboBibles.getValue() != null && bibleSetup.hasMoreBibles()) {
@@ -191,7 +186,7 @@ public class WebView extends HorizontalLayout {
 	private void processingUpdated(Float percent) {
 		// use access when modifying the UI from a background thread
 		this.getUI().orElseThrow().access(() -> {
-			progressBarSubLabel.setText(bibleSetup.getChapterUrl());
+			//progressBarSubLabel.setText(bibleSetup.getChapterUrl());
 			progressBar.setValue(percent);
 		});
 
@@ -207,24 +202,27 @@ public class WebView extends HorizontalLayout {
 
 			if (bibleSetup.getOutputZipFileName() != null) {
 
-				File file = new File(bibleSetup.getOutputZipFileName());
+				// File file = new File(bibleSetup.getOutputZipFileName());
 
 				Button buttonDownload = new Button("Download formatted files", event -> {
 
-					final StreamResource resource = new StreamResource(file.getName(), () -> {
-						try {
-							return new ByteArrayInputStream(FileUtils.readFileToByteArray(file));
-						} catch (IOException e) {
-							showError(e);
-						}
-						return null;
+					/*
+					 * final StreamResource resource = new StreamResource(file.getName(), () -> {
+					 * try { return new ByteArrayInputStream(FileUtils.readFileToByteArray(file)); }
+					 * catch (IOException e) { showError(e); } return null; });
+					 */
+					final StreamResource resource = new StreamResource(bibleSetup.getOutputZipFileName(), () -> {
+
+						return new ByteArrayInputStream(bibleSetup.getZipBytes());
+
 					});
+
 					final StreamRegistration registration = VaadinSession.getCurrent().getResourceRegistry()
 							.registerResource(resource);
 					UI.getCurrent().getPage().open(registration.getResourceUri().toString());
 
 				});
-				
+
 				divDownload.add(buttonDownload);
 				divDownload.setVisible(true);
 

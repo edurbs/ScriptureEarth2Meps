@@ -26,7 +26,7 @@ public class ParsePage   {
 	BibleSetup bibleSetup = null;
 
 
-	public ParsePage(BibleSetup bibleSetup, Document document, Book book) {
+	public ParsePage(BibleSetup bibleSetup, Document document, Book book, int currentChapter) {
 
 		/*
 		 * Step 3:2 Remove unwanted text such as introductions, comments, footers, and
@@ -166,14 +166,15 @@ public class ParsePage   {
 		 * handle with chapters with no verses, add text inside: ——
 		 */
 
-		int totalVersesEnum = book.getBookName().getNumberOfScriptures(bibleSetup.getCurrentChapter());
+		//int totalVersesEnum = book.getBookName().getNumberOfScriptures(bibleSetup.getCurrentChapter());
+		int totalVersesEnum = book.getBookName().getNumberOfScriptures(currentChapter);
 
 		// create and add verses on the div id content
 		Element elementDivClassContent = document.selectFirst("div[id=content]");
 
 		if (verses.size() == 0 && elementDivClassContent != null) {
 			lastVerse=totalVersesEnum;
-			elementDivClassContent.appendElement("span").text("{" + bibleSetup.getCurrentChapter() + "} ");
+			elementDivClassContent.appendElement("span").text("{" + currentChapter + "} ");
 			for (int i = 1; i <= totalVersesEnum; i++) {
 				if (i > 1) elementDivClassContent.appendElement("strong").text(String.valueOf(i));
 				elementDivClassContent.appendElement("span").text(" —— ");

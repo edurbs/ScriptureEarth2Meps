@@ -7,6 +7,7 @@ import com.vaadin.flow.server.PWA;
 import com.vaadin.flow.theme.Theme;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
 import org.springframework.scheduling.annotation.EnableAsync;
 
 /**
@@ -22,7 +23,7 @@ import org.springframework.scheduling.annotation.EnableAsync;
 @NpmPackage(value = "line-awesome", version = "1.3.0")
 @EnableAsync
 @Push
-public class Application implements AppShellConfigurator {
+public class Application extends SpringBootServletInitializer implements AppShellConfigurator {
 
 	private static final long serialVersionUID = 1L;
 

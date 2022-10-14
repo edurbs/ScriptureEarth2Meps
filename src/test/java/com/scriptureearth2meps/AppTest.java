@@ -10,7 +10,7 @@ import com.scriptureearth2meps.model.BookName;
  * Unit test for simple App.
  */
 public class AppTest{
-
+/*
 	@Test
 	public void testEnum() {
 		
@@ -39,7 +39,7 @@ public class AppTest{
 			e.printStackTrace();
 		}
 
-	}
+	}*/
 
 
 }

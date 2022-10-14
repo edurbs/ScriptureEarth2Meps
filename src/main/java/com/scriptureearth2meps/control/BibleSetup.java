@@ -1,9 +1,7 @@
 package com.scriptureearth2meps.control;
 
-import java.io.File;
-
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Type;
@@ -14,6 +12,11 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
+import java.util.concurrent.BrokenBarrierException;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -23,12 +26,8 @@ import com.google.gson.reflect.TypeToken;
 import com.scriptureearth2meps.model.Bible;
 import com.scriptureearth2meps.model.Book;
 import com.scriptureearth2meps.model.BookName;
-import com.scriptureearth2meps.model.Chapter;
-import com.scriptureearth2meps.model.Footnote;
 import com.scriptureearth2meps.model.JsonBook;
 import com.scriptureearth2meps.model.Language;
-import com.scriptureearth2meps.report.PrintResult;
-
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -36,16 +35,18 @@ import org.jsoup.select.Elements;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
-@Service
-public class BibleSetup  {
+/*
+ * TODO label instruction on top on 2 columns, add instruction to fill the fields
+ * TODO and destroy button download when language change or start is clicked
+ */
 
-	
+@Service
+public class BibleSetup {
+
 	private String languageCode;
 	private String bibleCode;
 	private String wordSee;
-	private int currentChapter;
 	private String glotal;
-	private String chapterUrl;
 	private float counter;
 	private float somaTotalChapters;
 	private boolean oldStyleBible;
@@ -55,8 +56,11 @@ public class BibleSetup  {
 	private List<String> fileList = new ArrayList<>();
 
 	private volatile boolean shouldStop = false;
-	
+
 	private String outputZipFileName;
+	private byte[] zipBytes;
+
+	private ExecutorService executor;
 
 	public BibleSetup() throws IOException {
 		// parse the site ScriptEarth for the language list only once
@@ -64,19 +68,35 @@ public class BibleSetup  {
 			makeLanguageList();
 		}
 	}
-	
+
+	public void setSomaTotalChapters(float somaTotalChapters) {
+		this.somaTotalChapters = somaTotalChapters;
+	}
+
+	public float getSomaTotalChapters() {
+		return somaTotalChapters;
+	}
+
+	public void setZipBytes(byte[] zipBytes) {
+		this.zipBytes = zipBytes;
+	}
+
+	public byte[] getZipBytes() {
+		return zipBytes;
+	}
+
 	public void setOldStyleBible(boolean oldStyleBible) {
 		this.oldStyleBible = oldStyleBible;
 	}
-	
+
 	public boolean getOldStyleBible() {
-		return this.oldStyleBible;		
+		return this.oldStyleBible;
 	}
-	
+
 	public void setOutputZipFileName(String outputZipFileName) {
 		this.outputZipFileName = outputZipFileName;
 	}
-	
+
 	public String getOutputZipFileName() {
 		return outputZipFileName;
 	}
@@ -85,20 +105,16 @@ public class BibleSetup  {
 		this.shouldStop = shouldStop;
 	}
 
+	public boolean getShouldStop() {
+		return this.shouldStop;
+	}
+
 	public void setCounter(float counter) {
 		this.counter = counter;
 	}
 
 	public float getCounter() {
 		return counter;
-	}
-
-	public void setChapterUrl(String chapterUrl) {
-		this.chapterUrl = chapterUrl;
-	}
-
-	public String getChapterUrl() {
-		return chapterUrl;
 	}
 
 	public void setFileList(List<String> fileList) {
@@ -115,14 +131,6 @@ public class BibleSetup  {
 
 	public String getGlotal() {
 		return glotal;
-	}
-
-	public void setCurrentChapter(int currentChapter) {
-		this.currentChapter = currentChapter;
-	}
-
-	public int getCurrentChapter() {
-		return currentChapter;
 	}
 
 	public void setWordSee(String wordSee) {
@@ -216,23 +224,25 @@ public class BibleSetup  {
 	/**
 	 * create the list of languages avaiable at
 	 * https://www.scriptureearth.org/data/language/sab/
-	 * @return 
+	 * 
+	 * @return
 	 * 
 	 * @throws IOException
 	 */
 	public void makeBibleList() throws IOException, MalformedURLException {
 		bibleList.clear();
 		setOldStyleBible(false);
-		
+
 		String url = "https://www.scriptureearth.org/data/" + this.getLanguageCode() + "/sab/";
-		
-		URL u = new URL (url);
-		HttpURLConnection huc =  (HttpURLConnection)  u.openConnection(); 
-	    huc.setRequestMethod("GET"); 
-	    huc.connect(); 
-	    if(huc.getResponseCode()!=200) {
-	    	return;
-	    };
+
+		URL u = new URL(url);
+		HttpURLConnection huc = (HttpURLConnection) u.openConnection();
+		huc.setRequestMethod("GET");
+		huc.connect();
+		if (huc.getResponseCode() != 200) {
+			return;
+		}
+		;
 
 		Document bibleListPage = Jsoup.connect(url).get();
 
@@ -242,17 +252,16 @@ public class BibleSetup  {
 		if (hrefElements != null) {
 
 			for (Element element : hrefElements) {
-				
-				if(element.text().endsWith(".html")){					
+
+				if (element.text().endsWith(".html")) {
 					// old style web Bible, and just one Bible
 					setOldStyleBible(true);
 					bibleList.add(new Bible(this.getLanguageCode()));
 					return;
-				}				
+				}
 				bibleList.add(new Bible(element.text().substring(0, 4)));
 			}
 		}
-		
 
 	}
 
@@ -264,25 +273,23 @@ public class BibleSetup  {
 
 	private void makeBookList() throws Exception {
 
-
-
 		// <script type="text/javascript" src="js/book-names.js"></script>
 		// https://www.scriptureearth.org/data/xav/sab/xav/js/book-names.js
-		// https://www.scriptureearth.org/data/aaz/sab/js/book-names.js  (oldStyle)
+		// https://www.scriptureearth.org/data/aaz/sab/js/book-names.js (oldStyle)
 
 		// get the javascript File
 		URL urlBooks = null;
-		if(getOldStyleBible()) {
+		if (getOldStyleBible()) {
 			urlBooks = new URL("https://www.scriptureearth.org/data/" + getLanguageCode() + "/sab/js/book-names.js");
-		}else {
+		} else {
 			urlBooks = new URL("https://www.scriptureearth.org/data/" + getLanguageCode() + "/sab/" + getBibleCode()
-			+ "/js/book-names.js");
+					+ "/js/book-names.js");
 		}
-		
+
 		// TODO error with AAZ
-		
+
 		System.out.println(urlBooks.toString());
-		
+
 		String jsonBooks = null;
 		try (InputStream in = urlBooks.openStream()) {
 			jsonBooks = new String(in.readAllBytes(), StandardCharsets.UTF_8);
@@ -290,10 +297,9 @@ public class BibleSetup  {
 
 		// fix the javascript file
 		int lastComma = jsonBooks.lastIndexOf(",");
-		//jsonBooks = jsonBooks.substring(11, jsonBooks.length() - 5);
+		// jsonBooks = jsonBooks.substring(11, jsonBooks.length() - 5);
 		jsonBooks = jsonBooks.substring(11, lastComma);
-		
-		
+
 		jsonBooks = jsonBooks + "\n]";
 		jsonBooks = jsonBooks.replaceAll("name", "\"name\"");
 		jsonBooks = jsonBooks.replaceAll("ref", "\"ref\"");
@@ -304,16 +310,14 @@ public class BibleSetup  {
 		ArrayList<JsonBook> jsonBooksList = new Gson().fromJson(jsonBooks, listType);
 
 		for (JsonBook jsonBook : jsonBooksList) {
-			
+
 			String urlBook;
-			if(getOldStyleBible()) {
-				urlBook = "https://www.scriptureearth.org/data/" + getLanguageCode() + "/sab/"
-						+ jsonBook.getRef();
-			}else {
+			if (getOldStyleBible()) {
+				urlBook = "https://www.scriptureearth.org/data/" + getLanguageCode() + "/sab/" + jsonBook.getRef();
+			} else {
 				urlBook = "https://www.scriptureearth.org/data/" + getLanguageCode() + "/sab/" + getBibleCode() + "/"
 						+ jsonBook.getRef();
 			}
-			
 
 			// get the book name from site
 			String nameScriptureEarth = urlBook.substring(urlBook.length() - 12, urlBook.length() - 9);
@@ -348,152 +352,106 @@ public class BibleSetup  {
 	// succeededListener) throws Exception {
 	@Async
 	public void process(Consumer<Float> progressListener, Runnable succeededListener) throws Exception {
-		this.outputZipFileName=null;
+		this.outputZipFileName = null;
 		makeBookList();
 
 		for (Book book : getBookList()) {
 			somaTotalChapters += book.getTotalChapters();
 		}
 
-		// while (!Thread.currentThread().isInterrupted()) {
+
+		// parse 3 book at same time
+		this.executor = Executors.newFixedThreadPool(3);
+
+
 
 		new Thread(() -> {
 
 			for (Book book : getBookList()) {
 
-				List<Chapter> chapterList = new ArrayList<>();
+				executor.execute(new ParseBook(book, this, progressListener));
 
-				this.setChapterUrl(book.getUrl());
+			}
 
-				while (!chapterUrl.isEmpty() && !shouldStop) { // TODO cancel does not show the download button
+			if (!shouldStop) {
 
-					System.out.println("Formating Chapter: " + chapterUrl);
-
-					counter++;
-
-					progressListener.accept((100 / somaTotalChapters) * counter);
-
-					if (!chapterUrl.endsWith("000.html")) { // ignore introduction
-
-						Document doc = null;
-						try {
-							doc = Jsoup.connect(chapterUrl).get();
-						} catch (IOException e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
-						}
-						doc.outputSettings().syntax(org.jsoup.nodes.Document.OutputSettings.Syntax.xml);
-						doc.outputSettings().charset("UTF-8");
-
-						// get the next chapter URL
-						Element nextChapter = doc.selectFirst("a[title=\"Next Chapter\"]");
-
-						// get the current chapter number
-						setCurrentChapter(Integer
-								.parseInt(chapterUrl.substring(chapterUrl.length() - 8, chapterUrl.length() - 5)));
-
-						Chapter chapter = new Chapter(book);
-						chapterList.add(chapter);
-
-						ParsePage parsePage = new ParsePage(this, doc, book);
-
-						/*
-						 * Footnotes Add a hard return at the end of each line with footnote text. Place
-						 * a Number sign (#) at the start of a line with footnote text. Place all
-						 * footnote text at the end of the Bible book.
-						 */
-						List<Footnote> footnotes = parsePage.getFootnotes();
-						for (Footnote footnote : footnotes) {
-							book.addFootnote(footnote);
-						}
-
-						book.addHtml(parsePage.getStringHtml().toString());
-
-						// if it has another chapter and not equais this chapter
-						if (nextChapter != null) {
-
-							String hrefNextChapter = nextChapter.attr("href");
-							hrefNextChapter = chapterUrl.substring(0, chapterUrl.lastIndexOf("/") + 1)
-									+ hrefNextChapter;
-							String nameScripEarth = book.getBookName().toString().substring(2);
-
-							// chapterurl
-							if (hrefNextChapter.contains("-" + nameScripEarth + "-") // if it's from the same book
-									&& !hrefNextChapter.equals(chapterUrl)) {
-								chapterUrl = hrefNextChapter;
-							} else {
-								chapterUrl = "";
-							}
-						} else {
-							chapterUrl = "";
-						}
-
-					}
-				}
-
-				book.getFootnotes().stream().forEach(footnote -> {
-					book.addHtml("<div>#" + footnote.getChapter() + ":" + footnote.getVerse() + " " + footnote.getNote()
-							+ "</div>");
-				});
-
-				String fileName = null;
 				try {
-					fileName = new PrintResult().html(book);
-				} catch (Exception e) {
+					createZip();
+				} catch (IOException | InterruptedException   e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
-				this.fileList.add(fileName);
+
 			}
-			
-			try {
-				createZip();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			
 			succeededListener.run();
 
 		}).start();
+		
+		
 
 	}
 
-	public void createZip() throws IOException {
-		this.outputZipFileName = "\\frontend\\temp\\sbi_" + Calendar.DAY_OF_YEAR + Calendar.HOUR_OF_DAY
-				+ Calendar.MINUTE + Calendar.SECOND + "_" + this.getBibleCode() + ".zip";
+	public void createZip() throws IOException, InterruptedException {
+		
+		// wait for all book parsers to finish
+		//this.barrier.await();
+		this.executor.shutdown(); 
+		this.executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
 
-		// create a ZipOutputStream object
-		FileOutputStream fos = new FileOutputStream(outputZipFileName);
-		ZipOutputStream zos = new ZipOutputStream(fos);
-		this.fileList.clear();
+		this.outputZipFileName = "sbi_" + Calendar.DAY_OF_YEAR + Calendar.HOUR_OF_DAY + Calendar.MINUTE
+				+ Calendar.SECOND + "_" + this.getBibleCode() + ".zip";
 
-		for (String file : this.fileList) {
+		/*
+		 * // create a ZipOutputStream object FileOutputStream fos = new
+		 * FileOutputStream(outputZipFileName); ZipOutputStream zos = new
+		 * ZipOutputStream(fos); this.fileList.clear();
+		 * 
+		 * for (String file : this.fileList) {
+		 * 
+		 * File srcFile = new File(file); FileInputStream fis = new
+		 * FileInputStream(srcFile);
+		 * 
+		 * // Start writing a new file entry zos.putNextEntry(new
+		 * ZipEntry(srcFile.getName()));
+		 * 
+		 * int length; // create byte buffer byte[] buffer = new byte[1024];
+		 * 
+		 * // read and write the content of the file while ((length = fis.read(buffer))
+		 * > 0) { zos.write(buffer, 0, length); } // current file entry is written and
+		 * current zip entry is closed zos.closeEntry();
+		 * 
+		 * // close the InputStream of the file fis.close();
+		 * 
+		 * }
+		 * 
+		 * // close the ZipOutputStream zos.close();
+		 */
 
-			File srcFile = new File(file);
-			FileInputStream fis = new FileInputStream(srcFile);
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		ZipOutputStream zipOut = new ZipOutputStream(baos);
 
-			// Start writing a new file entry
-			zos.putNextEntry(new ZipEntry(srcFile.getName()));
+		for (Book book : getBookList()) {
 
+			String html = "<html><head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\"></meta></head>"
+					+ book.getHtml().toString() + "</html>";
+			ByteArrayInputStream bais = new ByteArrayInputStream(html.getBytes());
+
+			ZipEntry zipEntry = new ZipEntry(book.getFileName());
+			zipOut.putNextEntry(zipEntry);
+
+			byte[] bytes = new byte[1024];
 			int length;
-			// create byte buffer
-			byte[] buffer = new byte[1024];
-
-			// read and write the content of the file
-			while ((length = fis.read(buffer)) > 0) {
-				zos.write(buffer, 0, length);
+			while ((length = bais.read(bytes)) >= 0) {
+				zipOut.write(bytes, 0, length);
 			}
-			// current file entry is written and current zip entry is closed
-			zos.closeEntry();
-
-			// close the InputStream of the file
-			fis.close();
-
+			bais.close();
 		}
 
-		// close the ZipOutputStream
-		zos.close();
+		zipOut.close();
+
+		baos.close();
+
+		this.zipBytes = baos.toByteArray();
 
 	}
 

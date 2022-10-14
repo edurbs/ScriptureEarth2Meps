@@ -13,12 +13,20 @@ public class Book {
 	private List<Footnote> footnotes = new ArrayList<>();
 	private StringBuilder html = new StringBuilder();
 	private String url;
-
+	private String fileName;
 	
 
 	public Book(BookName bookName, String url) {
 		this.bookName = bookName;
 		this.url = url;		
+	}
+	
+	public void setFileName(String fileName) {
+		this.fileName = fileName;
+	}
+	
+	public String getFileName() {
+		return fileName;
 	}
 	
 	public void setTotalChapters(int totalChapters) {

@@ -33,7 +33,7 @@ public class PrintResult   {
 		
 		PrintWriter file;
 		try {
-			String fileName="C:\\Users\\edurb\\Downloads\\"+book.getBookName().getMepsFormat()+".html";
+			String fileName="sbi_"+book.getBookName().getMepsFormat()+".html";
 			file = new PrintWriter(fileName);
 			
 			file.println("<html><head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\"></meta></head>"
