@@ -62,7 +62,7 @@ public class WebView extends VerticalLayout {
 			e.printStackTrace();
 		}
 		Component textNode = new Text(
-				"Follow the instructions, choose the language from ScriptureEarth and click com Start. Wait and download the zip file with the formatted books in MEPS format. Then you can continue with the Step 3 of PPD to format the secular Bible. Open each html file with Microsoft Word and save it as Meps Listing file .mps");
+				"Follow the instructions, choose your ScriptureEarth language, and click Start. Wait and download the zip file with the books formatted in MEPS format. Then you can continue with Step 3 of the PPD to format the secular Bible. Open each html file with Microsoft Word and save it as Meps listing file (.mps)");
 		
 		Div divText = new Div();
 		divText.add(textNode);
