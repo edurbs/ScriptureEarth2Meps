@@ -10,13 +10,11 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.List;
-import java.util.concurrent.BrokenBarrierException;
-
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.Future;
 import java.util.function.Consumer;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -35,10 +33,6 @@ import org.jsoup.select.Elements;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
-/*
- * TODO label instruction on top on 2 columns, add instruction to fill the fields
- * TODO and destroy button download when language change or start is clicked
- */
 
 @Service
 public class BibleSetup {
@@ -47,6 +41,7 @@ public class BibleSetup {
 	private String bibleCode;
 	private String wordSee;
 	private String glotal;
+	private String parsingThisPage;
 	private float counter;
 	private float somaTotalChapters;
 	private boolean oldStyleBible;
@@ -67,6 +62,14 @@ public class BibleSetup {
 		if (languageList.size() == 0) {
 			makeLanguageList();
 		}
+	}
+
+	public void setParsingThisPage(String parsingThisPage) {
+		this.parsingThisPage = parsingThisPage;
+	}
+
+	public String getParsingThisPage() {
+		return parsingThisPage;
 	}
 
 	public void setSomaTotalChapters(float somaTotalChapters) {
@@ -273,7 +276,7 @@ public class BibleSetup {
 
 	private void makeBookList() throws Exception {
 
-		// <script type="text/javascript" src="js/book-names.js"></script>
+		bookList.clear();
 		// https://www.scriptureearth.org/data/xav/sab/xav/js/book-names.js
 		// https://www.scriptureearth.org/data/aaz/sab/js/book-names.js (oldStyle)
 
@@ -288,8 +291,6 @@ public class BibleSetup {
 
 		// TODO error with AAZ
 
-		System.out.println(urlBooks.toString());
-
 		String jsonBooks = null;
 		try (InputStream in = urlBooks.openStream()) {
 			jsonBooks = new String(in.readAllBytes(), StandardCharsets.UTF_8);
@@ -297,13 +298,12 @@ public class BibleSetup {
 
 		// fix the javascript file
 		int lastComma = jsonBooks.lastIndexOf(",");
-		// jsonBooks = jsonBooks.substring(11, jsonBooks.length() - 5);
+
 		jsonBooks = jsonBooks.substring(11, lastComma);
 
 		jsonBooks = jsonBooks + "\n]";
 		jsonBooks = jsonBooks.replaceAll("name", "\"name\"");
 		jsonBooks = jsonBooks.replaceAll("ref", "\"ref\"");
-		System.out.println(jsonBooks);
 
 		Type listType = new TypeToken<ArrayList<JsonBook>>() {
 		}.getType();
@@ -346,39 +346,54 @@ public class BibleSetup {
 
 	}
 
-	// private List<Chapter> makeChaptersList(Book book) throws Exception {
-	// private ListenableFuture<String> makeChaptersList() throws Exception {
-	// public void process(Consumer<Float> progressListener, Runnable
-	// succeededListener) throws Exception {
 	@Async
 	public void process(Consumer<Float> progressListener, Runnable succeededListener) throws Exception {
 		this.outputZipFileName = null;
 		makeBookList();
-
+		
+		somaTotalChapters=0;
 		for (Book book : getBookList()) {
 			somaTotalChapters += book.getTotalChapters();
+
 		}
 
+		if (this.executor != null) {
+			this.executor.shutdownNow();
+		}
 
-		// parse 3 book at same time
-		this.executor = Executors.newFixedThreadPool(3);
+		this.executor = Executors.newFixedThreadPool(3); // parse N books at same time
 
-
+		List<Future<?>> futures = new ArrayList<>();
 
 		new Thread(() -> {
 
+			this.setCounter(0);
 			for (Book book : getBookList()) {
 
-				executor.execute(new ParseBook(book, this, progressListener));
+				Future<?> f = executor.submit(new ParseBook(book, this, progressListener));
+				futures.add(f);
 
+			}
+
+			for (Future<?> f : futures) { 
+				if(shouldStop) {break;}
+				try {
+					f.get();  // wait for all book parse to finish
+				} catch (InterruptedException e) {
+					
+					e.printStackTrace();
+				} catch (ExecutionException e) {
+					
+					e.printStackTrace();
+				}
 			}
 
 			if (!shouldStop) {
 
 				try {
 					createZip();
-				} catch (IOException | InterruptedException   e) {
-					// TODO Auto-generated catch block
+				} catch (IOException | InterruptedException e) {
+					
 					e.printStackTrace();
 				}
 
@@ -386,46 +401,12 @@ public class BibleSetup {
 			succeededListener.run();
 
 		}).start();
-		
-		
 
 	}
 
 	public void createZip() throws IOException, InterruptedException {
-		
-		// wait for all book parsers to finish
-		//this.barrier.await();
-		this.executor.shutdown(); 
-		this.executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
 
-		this.outputZipFileName = "sbi_" + Calendar.DAY_OF_YEAR + Calendar.HOUR_OF_DAY + Calendar.MINUTE
-				+ Calendar.SECOND + "_" + this.getBibleCode() + ".zip";
-
-		/*
-		 * // create a ZipOutputStream object FileOutputStream fos = new
-		 * FileOutputStream(outputZipFileName); ZipOutputStream zos = new
-		 * ZipOutputStream(fos); this.fileList.clear();
-		 * 
-		 * for (String file : this.fileList) {
-		 * 
-		 * File srcFile = new File(file); FileInputStream fis = new
-		 * FileInputStream(srcFile);
-		 * 
-		 * // Start writing a new file entry zos.putNextEntry(new
-		 * ZipEntry(srcFile.getName()));
-		 * 
-		 * int length; // create byte buffer byte[] buffer = new byte[1024];
-		 * 
-		 * // read and write the content of the file while ((length = fis.read(buffer))
-		 * > 0) { zos.write(buffer, 0, length); } // current file entry is written and
-		 * current zip entry is closed zos.closeEntry();
-		 * 
-		 * // close the InputStream of the file fis.close();
-		 * 
-		 * }
-		 * 
-		 * // close the ZipOutputStream zos.close();
-		 */
+		this.outputZipFileName = "sbi_" + this.getBibleCode() + ".zip";
 
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		ZipOutputStream zipOut = new ZipOutputStream(baos);

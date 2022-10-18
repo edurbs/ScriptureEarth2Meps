@@ -44,12 +44,28 @@ public class ParsePage   {
 		document.select("div[class=video-block]").remove();
 
 		// remove book prefix name
-		Element mt2 = document.selectFirst("div[class=mt2]");
+		/*
 		Element mt = document.selectFirst("div[class=mt]");
+		*/
+		
+		Elements mts = document.select("div[class=mt]");
+		Element mt = null;
+		for (int i = 0; i < mts.size(); i++) {
+			if(i==0) {
+				mt = document.selectFirst("div[class=mt]");
+			}else {
+				//mt.remove();
+				mts.get(i).remove();				
+			}
+		}
+		
+		Element mt2 = document.selectFirst("div[class=mt2]");
 		if (mt2 != null) {
 			mt.after(mt2.outerHtml());
 			mt2.remove();
 		}
+		
+		
 
 		/*
 		 * Step 3:3 Remove unnecessary formatting such as bulleted list styles or
@@ -188,11 +204,11 @@ public class ParsePage   {
 
 		if (lastVerse > totalVersesEnum) {
 			// change the tag of the new verses to sup
-			System.out.println("************ there are more verses");
+			
 			verses.last().tagName("sup");
 		} else if (lastVerse < totalVersesEnum) {
 			// complete with new verses
-			System.out.println("************ there are fewer verses");
+			
 			if(elementDivClassContent != null) {
 				Element div=elementDivClassContent.appendElement("div");
 				for (int i = lastVerse+1; i <= totalVersesEnum; i++) {

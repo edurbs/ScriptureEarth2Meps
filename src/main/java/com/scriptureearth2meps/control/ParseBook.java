@@ -14,56 +14,60 @@ import com.scriptureearth2meps.model.Chapter;
 import com.scriptureearth2meps.model.Footnote;
 
 public class ParseBook extends Thread {
-	
-	//private CyclicBarrier barrier;
+
 	private Book book;
 	private BibleSetup bibleSetup;
 	private Consumer<Float> progressListener;
-	
+
 	public ParseBook(Book book, BibleSetup bibleSetup, Consumer<Float> progressListener) {
-		//this.barrier = barrier;
+
 		this.book = book;
-		this.bibleSetup =bibleSetup;
+		this.bibleSetup = bibleSetup;
 		this.progressListener = progressListener;
 	}
-	
 
 	public void run() {
-		
-		try {
-			
-			List<Chapter> chapterList = new ArrayList<>();
 
-			// this.setChapterUrl(book.getUrl());
+		try {
+
+			List<Chapter> chapterList = new ArrayList<>();
+			float percent = 0;
+
 			String localChapterUrl = book.getUrl();
 
-			while (!localChapterUrl.isEmpty()) { // TODO cancel does not show the download button
+			while (!localChapterUrl.isEmpty()) {
 
-				
+				bibleSetup.setParsingThisPage(localChapterUrl);
+				bibleSetup.setCounter(bibleSetup.getCounter() + 1);
+				percent = (100 / bibleSetup.getSomaTotalChapters()) * bibleSetup.getCounter();
+				if (percent > 100) {
+					percent = 100;
+				}
+				progressListener.accept(percent);
 
 				if (!localChapterUrl.endsWith("000.html")) { // ignore introduction
 
-					Document doc = null;
+					if (bibleSetup.getShouldStop()) {
+						return;
+					}
 
-					// doc = Jsoup.connect(localChapterUrl).get();
+					Document doc = null;
 
 					try {
 						doc = Jsoup.connect(localChapterUrl).get();
 					} catch (IOException e) {
-						// TODO Auto-generated catch block
+
 						e.printStackTrace();
 					}
 
 					doc.outputSettings().syntax(org.jsoup.nodes.Document.OutputSettings.Syntax.xml);
 					doc.outputSettings().charset("UTF-8");
 
-					// get the next chapter URL
+					// get the next chapter URL ***before*** modifications from Parsepage
 					Element nextChapter = doc.selectFirst("a[title=\"Next Chapter\"]");
 
 					// get the current chapter number
-					// setCurrentChapter(Integer
-					// .parseInt(chapterUrl.substring(chapterUrl.length() - 8, chapterUrl.length() -
-					// 5)));
+
 					int localCurrentChapter = Integer.parseInt(
 							localChapterUrl.substring(localChapterUrl.length() - 8, localChapterUrl.length() - 5));
 
@@ -88,14 +92,15 @@ public class ParseBook extends Thread {
 					if (nextChapter != null) {
 
 						String hrefNextChapter = nextChapter.attr("href");
+
 						hrefNextChapter = localChapterUrl.substring(0, localChapterUrl.lastIndexOf("/") + 1)
 								+ hrefNextChapter;
 						String nameScripEarth = book.getBookName().toString().substring(2);
 
-						// chapterurl
 						if (hrefNextChapter.contains("-" + nameScripEarth + "-") // if it's from the same book
 								&& !hrefNextChapter.equals(localChapterUrl)) {
 							localChapterUrl = hrefNextChapter;
+
 						} else {
 							localChapterUrl = "";
 						}
@@ -104,34 +109,20 @@ public class ParseBook extends Thread {
 					}
 
 				}
-				
-				System.out.println("Formating Chapter: " + localChapterUrl);
-				bibleSetup.setCounter(bibleSetup.getCounter()+1);
-				progressListener.accept((100 / bibleSetup.getSomaTotalChapters()) * bibleSetup.getCounter());
 
 			}
 
-			if (!bibleSetup.getShouldStop()) {
+			book.getFootnotes().stream().forEach(footnote -> {
+				book.addHtml("<div>#" + footnote.getChapter() + ":" + footnote.getVerse() + " " + footnote.getNote()
+						+ "</div>");
+			});
 
-				book.getFootnotes().stream().forEach(footnote -> {
-					book.addHtml("<div>#" + footnote.getChapter() + ":" + footnote.getVerse() + " "
-							+ footnote.getNote() + "</div>");
-				});
+			String fileName = "sbi_" + book.getBookName().getMepsFormat() + ".html";
+			book.setFileName(fileName);
 
-				/*
-				 * String fileName = null; try { fileName = new PrintResult().html(book); }
-				 * catch (Exception e) { // TODO Auto-generated catch block e.printStackTrace();
-				 * }
-				 */
-				String fileName = "sbi_" + book.getBookName().getMepsFormat() + ".html";
-				book.setFileName(fileName);
-				// this.fileList.add(fileName);
-			}
-			
-			//this.barrier.await();
-			
 		} catch (Exception e) {
-			// TODO: handle exception
+			e.printStackTrace();
 		}
+
 	}
 }

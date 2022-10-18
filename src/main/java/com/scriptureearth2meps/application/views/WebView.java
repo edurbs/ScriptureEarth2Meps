@@ -1,15 +1,14 @@
 package com.scriptureearth2meps.application.views;
 
 import java.io.ByteArrayInputStream;
-import java.io.File;
 import java.io.IOException;
-import java.io.Serializable;
 import java.util.Collection;
-import org.apache.commons.io.FileUtils;
-
 import com.scriptureearth2meps.control.BibleSetup;
 import com.scriptureearth2meps.model.Bible;
 import com.scriptureearth2meps.model.Language;
+import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.Html;
+import com.vaadin.flow.component.Text;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.ComboBox;
@@ -19,9 +18,8 @@ import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.notification.Notification.Position;
 import com.vaadin.flow.component.notification.NotificationVariant;
-import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
+import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.progressbar.ProgressBar;
-import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
@@ -31,7 +29,7 @@ import com.vaadin.flow.server.VaadinSession;
 
 @PageTitle("ScriptureEarth to Meps format")
 @Route(value = "/se2meps")
-public class WebView extends HorizontalLayout {
+public class WebView extends VerticalLayout {
 
 	// private TextField name;
 	// private Button sayHello;
@@ -49,10 +47,10 @@ public class WebView extends HorizontalLayout {
 
 	private Button cancelButton = new Button("Cancel formatting");
 	private Notification notification = new Notification();
-	private TextArea textArea = new TextArea("Instruction",
-			"Download the zip file and start with the Step 3 of PPD: Convert Bible Documents to MEPS Open each html file with Microsoft Word and save it as Meps Listing file .mps");
 
-	private Div divDownload = new Div();
+	private Div buttonDiv = new Div();
+
+	// private Div divDownload = new Div();
 	private Button buttonStart = new Button("Start");
 	private FormLayout formLayout = new FormLayout();
 
@@ -63,12 +61,26 @@ public class WebView extends HorizontalLayout {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+		Component textNode = new Text(
+				"Follow the instructions, choose the language from ScriptureEarth and click com Start. Wait and download the zip file with the formatted books in MEPS format. Then you can continue with the Step 3 of PPD to format the secular Bible. Open each html file with Microsoft Word and save it as Meps Listing file .mps");
+		
+		Div divText = new Div();
+		divText.add(textNode);
+		add(divText);
+		
+		Html html =  new Html("<text> Source code avaiable at <a href='https://github.com/edurbs/ScriptureEarth2Meps'>github</a>. If you found a bug, please create an issue there.</text>");
+		
+		add(html);
+		
 
 		wordSee.setLabel("Word \"See\" translation:");
-		wordSee.setHelperText("Enter the translation of the word \"See\" in imperative form");
+		wordSee.setHelperText(
+				"Enter the translation of the word \"See\" in imperative form. It will be shown in the united scriptures.");
+		wordSee.setRequired(true);
 
 		glotal.setLabel("Glotal character:");
-		glotal.setHelperText("Enter the glottal character used by the language");
+		glotal.setHelperText("Enter the glottal character of the language.");
+		glotal.setRequired(true);
 
 		Collection<Language> languageList = bibleSetup.getLanguageList();
 
@@ -76,6 +88,7 @@ public class WebView extends HorizontalLayout {
 		comboLanguages.setItems(languageList);
 		comboLanguages.setItemLabelGenerator(Language::getLanguage);
 		comboLanguages.setPlaceholder("No language selected");
+		comboLanguages.setRequired(true);
 
 		comboLanguages.addValueChangeListener(e -> {
 			try {
@@ -89,14 +102,15 @@ public class WebView extends HorizontalLayout {
 		comboBibles.setVisible(false);
 
 		formLayout.add(wordSee, glotal, comboLanguages, comboBibles);
-		formLayout.setResponsiveSteps(new ResponsiveStep("0", 1), new ResponsiveStep("500px", 2));
-		formLayout.setSizeFull();
+		// formLayout.setResponsiveSteps(new ResponsiveStep("0", 1), new
+		// ResponsiveStep("500px", 1));
+		formLayout.setResponsiveSteps(new ResponsiveStep("0", 1));
 
 		div.add(formLayout);
 
 		buttonStart.addClickListener(e -> {
 			try {
-				onClick();
+				onClickStart();
 			} catch (Exception e1) {
 				showError(e1);
 			}
@@ -120,13 +134,9 @@ public class WebView extends HorizontalLayout {
 
 		div.add(progressBarLabel, progressBar, progressBarSubLabel, cancelButton);
 
-		divDownload.add(textArea);
-		// divDownload.add(buttonDownload);
-
-		div.add(divDownload);
-		divDownload.setVisible(false);
-
 		add(div);
+
+		add(buttonDiv);
 
 		setSizeFull();
 		setHeightFull();
@@ -138,8 +148,11 @@ public class WebView extends HorizontalLayout {
 
 	}
 
-	private void onClick() throws Exception {
-		divDownload.setVisible(false);
+	private void onClickStart() throws Exception {
+
+		
+		bibleSetup.setShouldStop(false);
+
 		if (!wordSee.getValue().isBlank() && !glotal.getValue().isBlank() && comboLanguages.getValue() != null) {
 
 			if (!bibleSetup.verifyWebBible()) {
@@ -154,8 +167,8 @@ public class WebView extends HorizontalLayout {
 			}
 			if (comboBibles.getValue() != null && bibleSetup.hasMoreBibles()) {
 				bibleSetup.setBibleCode(comboBibles.getValue().getBible());
-			}
-			if (bibleSetup.getBibleCode() == null && !bibleSetup.hasMoreBibles()) {
+			} else {
+				// if (bibleSetup.getLanguageCode() != null && !bibleSetup.hasMoreBibles()) {
 				bibleSetup.setBibleCode(bibleSetup.getLanguageCode());
 			}
 
@@ -163,12 +176,13 @@ public class WebView extends HorizontalLayout {
 			bibleSetup.setGlotal(glotal.getValue());
 			bibleSetup.setLanguageCode(comboLanguages.getValue().getLanguage());
 
+			buttonStart.setVisible(false);
 			progressBar.setVisible(true);
 			progressBarLabel.setVisible(true);
 			progressBarSubLabel.setVisible(true);
 			cancelButton.setVisible(true);
 
-			progressBarLabel.setText("Formating... please wait some minutes");
+			progressBarLabel.setText("Formating... " + bibleSetup.getBibleCode() + " please wait.");
 
 			bibleSetup.process(this::processingUpdated, this::processingSucceeded);
 
@@ -176,17 +190,20 @@ public class WebView extends HorizontalLayout {
 				bibleSetup.setShouldStop(true);
 
 				showMessage("Cancelled!");
+				buttonStart.setVisible(true);
 			});
 
 		} else {
 			showMessage("Fill in all form fields!");
 		}
+		buttonStart.setVisible(true);
 	}
 
 	private void processingUpdated(Float percent) {
 		// use access when modifying the UI from a background thread
 		this.getUI().orElseThrow().access(() -> {
-			//progressBarSubLabel.setText(bibleSetup.getChapterUrl());
+			// progressBarSubLabel.setText(bibleSetup.getChapterUrl());
+			progressBarSubLabel.setText(bibleSetup.getParsingThisPage());
 			progressBar.setValue(percent);
 		});
 
@@ -202,15 +219,8 @@ public class WebView extends HorizontalLayout {
 
 			if (bibleSetup.getOutputZipFileName() != null) {
 
-				// File file = new File(bibleSetup.getOutputZipFileName());
+				Button buttonDownload = new Button("Download sbi_" + bibleSetup.getBibleCode() + ".zip", event -> {
 
-				Button buttonDownload = new Button("Download formatted files", event -> {
-
-					/*
-					 * final StreamResource resource = new StreamResource(file.getName(), () -> {
-					 * try { return new ByteArrayInputStream(FileUtils.readFileToByteArray(file)); }
-					 * catch (IOException e) { showError(e); } return null; });
-					 */
 					final StreamResource resource = new StreamResource(bibleSetup.getOutputZipFileName(), () -> {
 
 						return new ByteArrayInputStream(bibleSetup.getZipBytes());
@@ -220,11 +230,11 @@ public class WebView extends HorizontalLayout {
 					final StreamRegistration registration = VaadinSession.getCurrent().getResourceRegistry()
 							.registerResource(resource);
 					UI.getCurrent().getPage().open(registration.getResourceUri().toString());
+					buttonDiv.removeAll();
 
 				});
 
-				divDownload.add(buttonDownload);
-				divDownload.setVisible(true);
+				buttonDiv.add(buttonDownload);
 
 			}
 
@@ -232,6 +242,7 @@ public class WebView extends HorizontalLayout {
 	}
 
 	private void showComboBible() throws IOException {
+		buttonStart.setEnabled(false);
 		comboBibles.setValue(null);
 		if (comboLanguages.getValue() != null) {
 			if (!comboLanguages.getValue().getLanguage().equals(bibleSetup.getLanguageCode())) {
@@ -251,10 +262,12 @@ public class WebView extends HorizontalLayout {
 					} else {
 						bibleSetup.setBibleCode(bibleSetup.getLanguageCode());
 						comboBibles.setVisible(false);
+
 					}
 				}
 			}
 		}
+		buttonStart.setEnabled(true);
 	}
 
 	private void showMessage(String msg) {
