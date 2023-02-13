@@ -10,5 +10,4 @@ It reads the indigenous language translations of the scriptures from the [Script
 - Docker
 - Oracle Cloud
 
-## Live at
-http://www.eduardo.soares.nom.br:8080/se2meps
+
