@@ -106,6 +106,7 @@ public class ParsePage   {
 		Element addToNextVerse = null;
 		
 		int lastVerse=verses.size();
+		String lastVerseNumver = null;
 
 		while (iterator.hasNext()) {
 			Element verse = iterator.next();
@@ -117,6 +118,7 @@ public class ParsePage   {
 
 			// Make sure that each digit is bold.
 			String verseNumver = verse.text();
+			lastVerseNumver=verseNumver;
 			verse.text(" ");
 			verse.append("<strong>" + verseNumver + "</strong> ");
 
@@ -134,9 +136,19 @@ public class ParsePage   {
 			if (verse.text().contains("-")) { // united verses
 				String[] unitedVerses = verse.text().split("-");
 				
-				int diff = Integer.parseInt(unitedVerses[1].replace("[^\\d.]", "")) - Integer.parseInt(unitedVerses[0].replace("[^\\d.]", ""));				
-				lastVerse += diff; 					
-				
+				int firstUnitedVerse=Integer.parseInt(unitedVerses[0].replace("[^\\d.]", ""));
+				int lastUnitedVerse=Integer.parseInt(unitedVerses[1].replace("[^\\d.]", ""));
+
+				lastVerseNumver=Integer.toString(lastUnitedVerse);
+
+				int diff = lastUnitedVerse - firstUnitedVerse;
+								
+				lastVerse += diff;
+
+				// Ester 1 (first verse united)
+				if(firstUnitedVerse == 1){
+					lastVerse--;
+				}
 
 				// remover the number of the first verse
 				verse.text(" ");
@@ -153,9 +165,7 @@ public class ParsePage   {
 
 					newVerse.appendElement("strong").text(" " + String.valueOf(i));
 					if (see.isEmpty()) {
-
-						newVerse.appendElement("span").text(" —— ");
-						;
+						newVerse.appendElement("span").text(" —— ");						
 					} else {
 						newVerse.appendElement("span").text(" " + markupInicial + see + " " + chapterNumber + ":"
 								+ unitedVerses[0] + markupFinal + " ").attr("style", "font-family:MEPS Bookman WTS;");
@@ -182,7 +192,6 @@ public class ParsePage   {
 		 * handle with chapters with no verses, add text inside: ——
 		 */
 
-		//int totalVersesEnum = book.getBookName().getNumberOfScriptures(bibleSetup.getCurrentChapter());
 		int totalVersesEnum = book.getBookName().getNumberOfScriptures(currentChapter);
 
 		// create and add verses on the div id content
@@ -201,22 +210,24 @@ public class ParsePage   {
 		/*
 		 * hanble with chapter with extra verses or fewer 
 		 */
-
-		if (lastVerse > totalVersesEnum) {
-			// change the tag of the new verses to sup
-			
-			verses.last().tagName("sup");
-		} else if (lastVerse < totalVersesEnum) {
-			// complete with new verses
-			
-			if(elementDivClassContent != null) {
-				Element div=elementDivClassContent.appendElement("div");
-				for (int i = lastVerse+1; i <= totalVersesEnum; i++) {
-					
-					div.appendElement("strong").text(String.valueOf(i));
-					div.appendElement("span").text(" —— ");
-
-				}	
+		if(lastVerseNumver != null){
+			int lastVerseNumverInt = Integer.parseInt(lastVerseNumver);
+	
+			if (lastVerseNumverInt > totalVersesEnum) {
+				// change the tag of the new verses to sup				
+				verses.last().tagName("sup");
+			} else if (lastVerseNumverInt < totalVersesEnum) {
+				// complete with new verses
+				
+				if(elementDivClassContent != null) {
+					Element div=elementDivClassContent.appendElement("div");
+					for (int i = lastVerseNumverInt+1; i <= totalVersesEnum; i++) {
+						
+						div.appendElement("strong").text(String.valueOf(i));
+						div.appendElement("span").text(" —— ");
+	
+					}	
+				}
 			}
 		}
 
