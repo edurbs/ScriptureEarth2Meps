@@ -436,6 +436,7 @@ public class ParsePage   {
 
 				String noteHtml = "<html><body>" + mapFootnotes.get(key) + "</body></html>";
 				Document documentNoteHtml = getDocFromString(noteHtml);
+				documentNoteHtml.outputSettings().charset("UTF-8");
 
 				// get the Chapter and Verse, and later remove it
 				Element elementFr = documentNoteHtml.selectFirst("span[class=fr]");
@@ -460,7 +461,7 @@ public class ParsePage   {
 		/*
 		 * Change the apostrofe to glotal
 		 */		
-		String apostrophe = "\u0027"; 
+		String apostrophe = "\u0027"; 		
 		String glotal = bibleSetup.getGlotal();
 		
 		String htmlWithGlotal;

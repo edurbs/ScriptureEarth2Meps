@@ -8,6 +8,7 @@ import java.lang.reflect.Type;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -414,9 +415,9 @@ public class BibleSetup {
 		for (Book book : getBookList()) {
 
 			String html = "<html><head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\"></meta></head>"
-					+ book.getHtml().toString() + "</html>";
-			ByteArrayInputStream bais = new ByteArrayInputStream(html.getBytes());
-
+					+ book.getHtml().toString() + "</html>";		
+			
+			ByteArrayInputStream bais = new ByteArrayInputStream(html.getBytes(StandardCharsets.UTF_8));
 			ZipEntry zipEntry = new ZipEntry(book.getFileName());
 			zipOut.putNextEntry(zipEntry);
 
