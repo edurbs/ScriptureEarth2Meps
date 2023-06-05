@@ -289,7 +289,7 @@ public class ParsePage   {
 		Element spanClassMt = document.selectFirst("span[class=mt]");
 		if (divClassMt != null) { // se for o primeiro capítulo
 			document.getElementsByTag("body").before("%" + String.format("%02d", bookNumber + 1));
-			divClassMt.prependElement("span").text("$");
+			divClassMt.prependElement("span").text("%");
 			spanClassMt.tagName("Strong");
 		}
 
@@ -407,10 +407,16 @@ public class ParsePage   {
 			 * follows poetic text or any type of heading.
 			 */
 			if (nextElement != null) {
-				if (nextElement.selectFirst("div[class=m]") != null || nextElement.selectFirst("span[class=p]") != null
-						|| nextElement.selectFirst("div[class=p]") != null) {
-					if (nextElement.selectFirst("b[class=v]") != null) {
-						nextElement.selectFirst("b[class=v]").prependText("+"); // add before verse
+				if (nextElement.selectFirst("div[class=m]") != null 
+						|| nextElement.selectFirst("span[class=p]") != null
+						|| nextElement.selectFirst("div[class=p]") != null
+						|| nextElement.selectFirst("div[class=mt2]") != null
+						|| nextElement.selectFirst("div[class=s2]") != null
+						|| nextElement.selectFirst("div[class=s]") != null
+						) {
+					if (nextElement.selectFirst("b[class=v]").child(0) != null) {
+						nextElement.selectFirst("b[class=v]").child(0).prependText("+"); // add before verse						
+						
 					} else {
 						nextElement.prependText("+"); // add before text
 					}
