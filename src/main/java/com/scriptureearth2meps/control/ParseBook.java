@@ -56,11 +56,10 @@ public class ParseBook extends Thread {
 					try {
 						doc = Jsoup.connect(localChapterUrl).get();
 					} catch (IOException e) {
-
 						e.printStackTrace();
 					}
 
-					doc.outputSettings().syntax(org.jsoup.nodes.Document.OutputSettings.Syntax.xml);
+					doc.outputSettings().syntax(org.jsoup.nodes.Document.OutputSettings.Syntax.xml);					
 					doc.outputSettings().charset("UTF-8");
 
 					// get the next chapter URL ***before*** modifications from Parsepage
