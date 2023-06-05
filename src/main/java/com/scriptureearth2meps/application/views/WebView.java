@@ -182,7 +182,7 @@ public class WebView extends VerticalLayout {
 			progressBarSubLabel.setVisible(true);
 			cancelButton.setVisible(true);
 
-			progressBarLabel.setText("Formating... " + bibleSetup.getBibleCode() + " please wait.");
+			progressBarLabel.setText("Formatting... " + bibleSetup.getBibleCode() + " please wait.");
 
 			bibleSetup.process(this::processingUpdated, this::processingSucceeded);
 
