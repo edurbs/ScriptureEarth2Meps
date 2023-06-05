@@ -150,9 +150,13 @@ public class ParsePage   {
 					lastVerse--;
 				}
 
-				// remover the number of the first verse
+				// remover the number of the first united verse
 				verse.text(" ");
-				verse.append(" <strong>" + unitedVerses[0] + "</strong> ");
+
+				// if it is not the first verse of the chapter, add que verse number
+				if(firstUnitedVerse > 1){
+					verse.append(" <strong>" + unitedVerses[0] + "</strong> ");
+				}
 
 				// append in the scripture which verses was united ex. 1:22-23
 				verse.appendElement("span").text(" " + markupInicial + chapterNumber + ":" + unitedVerses[0] + "-"
@@ -163,7 +167,11 @@ public class ParsePage   {
 				// add the noexistent verse numbers on html
 				for (int i = Integer.parseInt(unitedVerses[0]) + 1; i < Integer.parseInt(unitedVerses[1]) + 1; i++) {
 
-					newVerse.appendElement("strong").text(" " + String.valueOf(i));
+					// if it is not the first verse of the chapter, add que verse number
+					if(i > 1){
+						newVerse.appendElement("strong").text(" " + String.valueOf(i));
+					}	
+
 					if (see.isEmpty()) {
 						newVerse.appendElement("span").text(" —— ");						
 					} else {
@@ -240,11 +248,15 @@ public class ParsePage   {
 		 */
 
 		// if the book does not have just one chapter
-		Element spanV = document.selectFirst("span.v");
-		if (spanV != null) {
-			if (book.getBookName().getNumberOfChapters() > 1) {
-				spanV.remove(); // delete verse 1
-			}
+		int totalChapters = book.getBookName().getNumberOfChapters();
+		
+		Element spanV = document.selectFirst("span.v");		
+		Element spanCDrop = document.selectFirst("span[class=c-drop]");
+
+		if (totalChapters > 1 && spanV != null) {
+			spanV.remove(); // delete verse 1
+		} else if (totalChapters == 1 && spanCDrop != null) {			
+			spanCDrop.after(" <strong>1</strong> ");
 		}
 
 		/*
@@ -285,7 +297,7 @@ public class ParsePage   {
 		 * Place a Dollar sign ($) at the start of a line with a superscription.
 		 */
 		// get the chapter number
-		Element spanCDrop = document.selectFirst("span[class=c-drop]");
+		//Element spanCDrop = document.selectFirst("span[class=c-drop]");
 		if (spanCDrop != null) {
 
 			String capTag = spanCDrop.text();
@@ -303,15 +315,16 @@ public class ParsePage   {
 
 			// if superscription exists, add the sign $ at the start
 			Element divIdD1 = document.selectFirst("div[id=d1]");
-			if (capHasSuper && divIdD1 != null) {
+			if (capHasSuper && divIdD1 != null && book.getBookName().ordinal() == 18) {
 				divIdD1.prependText("$");
 			}
 			// IF THE SUPERSCRIPTION IS MISSING IN THE SECULAR BIBLE and the book is Psalm:
-			else if (capHasSuper && divIdD1 == null && book.getBookName().ordinal() == 18) {
-				// Add an empty superscription befora the chapter.
-				spanCDrop.before("<div>$</div>");
+			// else if (capHasSuper && divIdD1 != null && book.getBookName().ordinal() == 18) {
+			// 	// Add an empty superscription befora the chapter.
+			// 	//spanCDrop.before("<div>$</div>");
+			// 	divIdD1.prependText("$");
 
-			}
+			// }
 
 		}
 
