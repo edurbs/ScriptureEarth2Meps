@@ -362,7 +362,7 @@ public class BibleSetup {
 			this.executor.shutdownNow();
 		}
 
-		this.executor = Executors.newFixedThreadPool(3); // parse N books at same time
+		this.executor = Executors.newFixedThreadPool(4); // parse N books at same time
 
 		List<Future<?>> futures = new ArrayList<>();
 
