@@ -8,7 +8,6 @@ import java.util.List;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
-import org.jsoup.parser.Tag;
 import org.jsoup.select.Elements;
 
 import com.google.gson.Gson;
@@ -19,13 +18,9 @@ import com.scriptureearth2meps.model.Footnote;
 
 public class ParsePage   {
 	
-
-	/**
-	 *
-	 */
 	private static final String SPAN = "span";
 	private static final String STRONG = "strong";
-	private static final String FONT_FAMILY_MEPS_BOOKMAN_WTS = "font-family:MEPS Bookman WTS;";
+	private static final String FONT_MEPS = "font-family:Markup;";
 	private StringBuilder stringHtml = new StringBuilder();
 	private List<Footnote> footnotes = new ArrayList<>();
 	private String javaScriptFootnotes = null;
@@ -34,6 +29,8 @@ public class ParsePage   {
 
 
 	public ParsePage(BibleSetup bibleSetup, Document document, Book book, int currentChapter) {
+
+		this.bibleSetup = bibleSetup;
 
 		/*
 		 * Step 3:2 Remove unwanted text such as introductions, comments, footers, and
@@ -54,34 +51,17 @@ public class ParsePage   {
 		 */
 		document.getElementsByAttributeValue("class", "it").tagName("i");
 
-		/*
-		 * Step 4A:3 a. Add curly brackets { } around the number. For example, chapter
-		 * 10 would appear as {10}. b. Ensure that one space exists after each chapter
-		 * number.
-		 */
-
-		String chapterNumber = addBrackets(document);
-
-		String markupInicial = "\uF850";
-		String markupFinal = "\uF851";
-		String see = bibleSetup.getWordSee();
-
-		Elements verses = document.select("span[class=v]");		
-
-		Element lastVerse = handleUnitedVerses(chapterNumber, markupInicial, markupFinal, see, verses);
+		Element lastVerse = handleUnitedVerses(document);
 		
 		/*
 		 * handle with chapters with no verses, add text inside: ——
 		 */
 
-		int totalVersesEnum = book.getBookName().getNumberOfScriptures(currentChapter);
-
-		Element elementDivClassContent = handleNoVerseChapter(document, currentChapter, verses, totalVersesEnum);
 		
 		/*
 		 * hanble with chapter with extra verses or fewer 
 		 */
-		handleExtraOrFewerVerses(verses, lastVerse, totalVersesEnum, elementDivClassContent);
+		handleExtraOrFewerVerses(lastVerse, book, document, currentChapter);
 
 		/*
 		 * Step 4A:1 b. Remove the verse number from the first verse in each chapter, if
@@ -120,16 +100,7 @@ public class ParsePage   {
 
 		addAtSign(document);
 
-
-		/*
-		* Place a Plus sign (+) at the start of a line when body text immediately
-		* follows any type of heading
-		*/
-		// TODO
-		
-
-
-		/*
+	/*
 		 * ======Poetic text a. Add a soft return </br> (Shift+Enter) at the end of each
 		 * line. OK b. Add a hard return at the end of a stanza. OK c. When poetic text
 		 * starts in the middle of a verse, add a soft return (Shift+Enter) to the end
@@ -161,22 +132,85 @@ public class ParsePage   {
 
 	}
 
-	private Element handleUnitedVerses(String chapterNumber, String markupInicial, String markupFinal, String see,
-			Elements verses) {
+	private Element handleUnitedVerses(Document document) {
+		
+		
+		/*
+		 * Step 4A:3 a. Add curly brackets { } around the number. For example, chapter
+		 * 10 would appear as {10}. b. Ensure that one space exists after each chapter
+		 * number.
+		 */
+
+		String chapterNumber = addBrackets(document);
+
+		Elements verses = document.select("span[class=v]");		
+
+		String markupInicial = "\uF850";
+		String markupFinal = "\uF851";
+		String see = this.bibleSetup.getWordSee();
+
 		Element addToNextVerse = null;
 		Iterator<Element> iterator = verses.iterator();
 		
 		// int lastVerse=verses.size();
 		// String lastVerseNumver = null;
 		Element lastElement = verses.last();
+		Element lastIterator = null;
+		boolean firstVerseOnParagraph = false;
+		boolean hasTextBeforeFirstVerse = false;
 
 		while (iterator.hasNext()) {
 			Element verse = iterator.next();
+			if(Integer.parseInt(chapterNumber)==36){
+				System.out.println("36");
+			}
 
-			if (addToNextVerse != null) {
-				verse.before(addToNextVerse.html());
+			if (addToNextVerse != null) {	
+				if (firstVerseOnParagraph){
+					if(!hasTextBeforeFirstVerse){
+						// add on previous §
+						lastIterator.parent().appendChild(addToNextVerse);
+					}else{
+						// on the same §
+						verse.before(addToNextVerse);	
+					}
+				} else if (lastIterator != null 
+						&& lastIterator.nextElementSiblings().isEmpty()
+						&& lastIterator.parent() != null
+						&& lastIterator.parent().previousElementSibling() != null
+						// && verse.firstElementChild()!=null 
+						// && verse.firstElementChild().className().equalsIgnoreCase("v") // when is not the first verse in the §
+				) {
+					// works when no more verses in the paragraph
+					lastIterator.parent().previousElementSibling().appendChild(addToNextVerse);				
+				// } else if(verse.firstElementChild()!=null
+				// 		&& !verse.firstElementChild().className().equalsIgnoreCase("v")){
+				// 	// when is the first verse in the §
+				// 	lastIterator.parent().appendChild(addToNextVerse);				
+				} else {
+					// TODO if there are more verses in the div p, 					
+					//verse.prependChild(addToNextVerse);
+					verse.before(addToNextVerse);
+				}
+				
+				if(verse.parent()!=null 
+						&& verse.parent().firstElementChild()!= null
+						&& verse.parent().firstElementChild().equals(verse)					
+				){
+					firstVerseOnParagraph=true;				
+					if (verse.siblingIndex()==0) {
+						hasTextBeforeFirstVerse=false;
+					} else {
+						hasTextBeforeFirstVerse=true;
+					}
+				}else{
+					firstVerseOnParagraph=false;
+				}
 				addToNextVerse = null;
 			}
+
+			
+
 
 
 			/*
@@ -194,18 +228,7 @@ public class ParsePage   {
 				String[] unitedVerses = verse.text().split("-");
 				
 				int firstUnitedVerse=Integer.parseInt(unitedVerses[0].replace("[^\\d.]", ""));
-				int lastUnitedVerse=Integer.parseInt(unitedVerses[1].replace("[^\\d.]", ""));
-
-				// lastVerseNumver=Integer.toString(lastUnitedVerse);
-
-				int diff = lastUnitedVerse - firstUnitedVerse;
-								
-				// lastVerse += diff;
-
-				// Ester 1 (first verse united)
-				if(firstUnitedVerse == 1){
-					// lastVerse--;
-				}
+				//int lastUnitedVerse=Integer.parseInt(unitedVerses[1].replace("[^\\d.]", ""));
 
 				// remove first united verse number
 				verse.text(" ");
@@ -228,17 +251,12 @@ public class ParsePage   {
 
 				Element unitedVersesText = new Element(SPAN)
 					.text(unitedText)
-					.attr("style", FONT_FAMILY_MEPS_BOOKMAN_WTS)
+					.attr("style", FONT_MEPS)
 					.attr("class", "unitedVersesText");
 				verse.after(unitedVersesText);
 
-
-				// verse.parent().appendElement(SPAN).
-				// 	text(unitedText)
-				// 	.attr("style", FONT_FAMILY_MEPS_BOOKMAN_WTS)
-				// 	.attr("class", "unitedVersesText");
-
 				Element newVerse = new Element(SPAN);
+				lastElement = newVerse;
 
 				// add the noexistent verse numbers on html
 				for (int i = Integer.parseInt(unitedVerses[0]) + 1; i < Integer.parseInt(unitedVerses[1]) + 1; i++) {
@@ -266,7 +284,7 @@ public class ParsePage   {
 						
 						newVerse.appendElement(SPAN)
 							.text(unitedVerseSeeText)
-							.attr("style", FONT_FAMILY_MEPS_BOOKMAN_WTS)
+							.attr("style", FONT_MEPS)
 							.attr("class", "unitedVerseSee");						
 					}
 				}
@@ -277,17 +295,33 @@ public class ParsePage   {
 				 * number: span class=v
 				 */
 				if (!iterator.hasNext()) { // if there's NO more verse in the chapter
-					// add at the end of the div: parent()
-					newVerse.appendTo(verse.parent());
-
-				} else { // if there's more verse in the chapter,
+					
+					// and add after it
+					var verseParent = verse.parent();
+					if(verseParent != null){
+						Element nextElementAtEnd = verseParent.nextElementSibling();
+	
+						if (nextElementAtEnd != null 
+								&& (
+									nextElementAtEnd.className().equalsIgnoreCase("p") // normal paragraph
+									|| nextElementAtEnd.className().startsWith("q") // poetic text
+								)
+						) {							
+							nextElementAtEnd.appendChild(newVerse);
+						} else {
+							// add at the end of the div: parent()
+							newVerse.appendTo(verse.parent());													
+						}
+					}
+				} else { // if there's more verses in the chapter,
 					// add at the start of the next verse number
 					addToNextVerse = newVerse;
+					lastIterator = verse;
 				}
 			}
 			// Make sure that each digit is bold.
 			makeVerseBold(verse);
-			lastElement = verse;
+			
 		}
 		return lastElement;
 	}
@@ -576,30 +610,39 @@ public class ParsePage   {
 		}
 	}
 
-	private void handleExtraOrFewerVerses(Elements verses, Element lastVerse, int totalVersesEnum,
-			Element elementDivClassContent) {
+	private void handleExtraOrFewerVerses(Element lastVerse, Book book, Document document, int currentChapter ) {
 
+		Elements verses = document.select("span[class=v]");		
+		int totalVersesEnum = book.getBookName().getNumberOfScriptures(currentChapter);
+
+		Element elementDivClassContent = handleNoVerseChapter(document, currentChapter, verses, totalVersesEnum);
 		if(lastVerse != null){
 			Element lastVerseTemp = lastVerse;
-			int lastVerseNumverInt =Integer.parseInt(lastVerseTemp.text());
+			try {
+				int lastVerseNumverInt =Integer.parseInt(lastVerseTemp.text());
 	
-			if (lastVerseNumverInt > totalVersesEnum) {
-				// change the tag of the new verses to sup				
-				verses.last().tagName("sup");
-			} else if (lastVerseNumverInt < totalVersesEnum) {
-				// complete with new verses
-				
-				if(elementDivClassContent != null) {
-					Element div=elementDivClassContent.appendElement("div");
-					for (int i = lastVerseNumverInt+1; i <= totalVersesEnum; i++) {					
-						div.appendElement(STRONG)
-							.text(String.valueOf(i));
-						div.appendElement(SPAN)
-							.text(" —— ");
-	
-					}	
+				if (lastVerseNumverInt > totalVersesEnum) {
+					// change the tag of the new verses to sup				
+					verses.last().tagName("sup");
+				} else if (lastVerseNumverInt < totalVersesEnum) {
+					// complete with new verses
+					
+					if(elementDivClassContent != null) {
+						Element div=elementDivClassContent.appendElement("div");
+						for (int i = lastVerseNumverInt+1; i <= totalVersesEnum; i++) {					
+							div.appendElement(STRONG)
+								.text(String.valueOf(i));
+							div.appendElement(SPAN)
+								.text(" —— ");
+		
+						}	
+					}
 				}
+				
+			} catch (Exception e) {
+
 			}
+	
 		}
 	}
 
