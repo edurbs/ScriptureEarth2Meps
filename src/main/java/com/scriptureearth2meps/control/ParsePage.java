@@ -170,9 +170,6 @@ public class ParsePage   {
 
 		while (iterator.hasNext()) {
 			Element verse = iterator.next();
-			if(Integer.parseInt(chapterNumber)==36){
-				System.out.println("36");
-			}
 
 			if (addToNextVerse != null) {	
 				if (firstVerseOnParagraph){
