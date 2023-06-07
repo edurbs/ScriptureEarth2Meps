@@ -8,7 +8,6 @@ import java.util.List;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
-import org.jsoup.parser.Tag;
 import org.jsoup.select.Elements;
 
 import com.google.gson.Gson;
@@ -171,6 +170,9 @@ public class ParsePage   {
 
 		while (iterator.hasNext()) {
 			Element verse = iterator.next();
+			if(Integer.parseInt(chapterNumber)==36){
+				System.out.println("36");
+			}
 
 			if (addToNextVerse != null) {	
 				if (firstVerseOnParagraph){
