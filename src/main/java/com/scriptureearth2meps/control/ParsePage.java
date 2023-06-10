@@ -399,6 +399,7 @@ public class ParsePage   {
 		 * 2.	For books not containing chapters, 
 		 *      add verse number one to the beginning of the first verse, 
 		 *      if it has not been included in the pasted text
+		 * 		AND remove the chapter number
 		 */
 
 		if(spanV != null) {
@@ -414,7 +415,10 @@ public class ParsePage   {
 		if (totalChapters == 1 && spanCDrop != null) {			
 			Element s = new Element(STRONG).text("1");
 			spanCDrop.after(s);	
-		}
+			//AND remove the chapter number
+			spanCDrop.text("");
+		}		
+
 		return spanCDrop;
 	}
 
@@ -562,26 +566,26 @@ public class ParsePage   {
 
 			String capTag = spanCDrop.text();
 
-			capTag = capTag.substring(1, capTag.length() - 1);
-			int cap = Integer.parseInt(capTag);
-
-			// all chapters of Salm without a superscription
-			boolean capHasSuper = switch (cap) {
-				case 1, 2, 10, 33, 43, 71, 91, 93, 94, 95, 96, 97, 99, 104, 105, 106, 107, 111, 112, 113, 114, 115, 116,
-						117, 118, 119, 135, 136, 137, 146, 147, 148, 149, 150 ->
-					false;
-				default -> true;
-			};
-
-			// if superscription exists, add the sign $ at the start
-			Element divIdD1 = document.selectFirst("div[id=d1]");
-			if (capHasSuper && divIdD1 != null && book.getBookName().ordinal() == 18) {
-				divIdD1.prependText("$");
-
-				addPlusSignAfterHead(divIdD1.parent());
+			if(!capTag.isEmpty()){
+				capTag = capTag.substring(1, capTag.length() - 1);
+				int cap = Integer.parseInt(capTag);
+	
+				// all chapters of Salm without a superscription
+				boolean capHasSuper = switch (cap) {
+					case 1, 2, 10, 33, 43, 71, 91, 93, 94, 95, 96, 97, 99, 104, 105, 106, 107, 111, 112, 113, 114, 115, 116,
+							117, 118, 119, 135, 136, 137, 146, 147, 148, 149, 150 ->
+						false;
+					default -> true;
+				};
+	
+				// if superscription exists, add the sign $ at the start
+				Element divIdD1 = document.selectFirst("div[id=d1]");
+				if (capHasSuper && divIdD1 != null && book.getBookName().ordinal() == 18) {
+					divIdD1.prependText("$");
+	
+					addPlusSignAfterHead(divIdD1.parent());
+				}
 			}
-
-
 		}
 	}
 
