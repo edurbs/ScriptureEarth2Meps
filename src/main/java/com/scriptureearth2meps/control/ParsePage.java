@@ -332,6 +332,7 @@ public class ParsePage   {
 		document.getElementById("book-menu").remove();
 		document.getElementById("chapter-menu").remove();
 		document.getElementById("toolbar-top").remove();
+		document.getElementById("toolbar-bottom").remove();
 		document.getElementsByAttributeValue("class", "footer").remove();
 		document.select("span[id^=bookmarks]").remove();
 		document.select("a").remove();
@@ -502,20 +503,24 @@ public class ParsePage   {
 		
 		String glotal = bibleSetup.getGlotal();
 		
-		// replace glotal on footnotes
-		for(Footnote footnote : this.getFootnotes()) {
-			String footnoteText = footnote.getText();
-			String modifiedText = footnoteText.replace(APOSTROPHE, glotal);
-			footnote.setText(modifiedText);
-		}
-		
 		String htmlWithGlotal;
-		if (!glotal.isBlank()) {
+		if (!glotal.isEmpty()) {
+
+			// replace glotal on footnotes
+			for(Footnote footnote : this.getFootnotes()) {
+				String footnoteText = footnote.getText();
+				String modifiedText = footnoteText.replace(APOSTROPHE, glotal);
+				footnote.setText(modifiedText);
+			}
+		
 			htmlWithGlotal = document.getElementsByTag("body").html().replace(APOSTROPHE, glotal);			
 		}else {
 			htmlWithGlotal = document.getElementsByTag("body").html();
 		}
+		
 		return htmlWithGlotal;
+	
+		
 	}
 
 	private void handlePoeticText(Document document) {
