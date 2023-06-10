@@ -7,7 +7,7 @@ import java.util.Objects;
 public class Book {
 
 	private BookName bookName;
-	private int TotalChapters;
+	private int totalChapters;
 
 	private List<Chapter> chapters = new ArrayList<>();
 	private List<Footnote> footnotes = new ArrayList<>();
@@ -30,11 +30,11 @@ public class Book {
 	}
 	
 	public void setTotalChapters(int totalChapters) {
-		TotalChapters = totalChapters;
+		this.totalChapters = totalChapters;
 	}
 	
 	public int getTotalChapters() {
-		return TotalChapters;
+		return totalChapters;
 	}
 
 	public String getNameMeps() {

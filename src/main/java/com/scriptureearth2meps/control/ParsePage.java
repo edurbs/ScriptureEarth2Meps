@@ -54,9 +54,19 @@ public class ParsePage   {
 		Element lastVerse = handleUnitedVerses(document);
 		
 		/*
-		 * handle with chapters with no verses, add text inside: ——
+		 * Footnotes
+		 * 
+		 * • Replace each footnote reference symbol with an Asterisk (*) in the body
+		 * text. DONE
+		 *
 		 */
-
+	
+		handleFootnotes(document);
+		
+		/*
+		* handle with chapters with no verses, add text inside: ——
+		*/
+		
 		
 		/*
 		 * hanble with chapter with extra verses or fewer 
@@ -100,7 +110,7 @@ public class ParsePage   {
 
 		addAtSign(document);
 
-	/*
+		/*
 		 * ======Poetic text a. Add a soft return </br> (Shift+Enter) at the end of each
 		 * line. OK b. Add a hard return at the end of a stanza. OK c. When poetic text
 		 * starts in the middle of a verse, add a soft return (Shift+Enter) to the end
@@ -109,15 +119,9 @@ public class ParsePage   {
 
 		handlePoeticText(document);
 
-		/*
-		 * Footnotes
-		 * 
-		 * • Replace each footnote reference symbol with an Asterisk (*) in the body
-		 * text. DONE
-		 *
-		 */
 
-		handleFootnotes(document);
+		document.select("script").remove(); // remove scrip here to not break footnotes method
+
 		
 		/*
 		 * Change the apostrofe to glotal
@@ -330,7 +334,7 @@ public class ParsePage   {
 		document.getElementsByAttributeValue("class", "footer").remove();
 		document.select("span[id^=bookmarks]").remove();
 		document.select("a").remove();
-		document.select("script").remove();
+		//document.select("script").remove();
 		document.select("span[class=vsp]").remove(); // remove &nbsp
 		document.select("div[class=b]").remove();
 		document.select("div[class=video-block]").remove();
@@ -433,57 +437,58 @@ public class ParsePage   {
 
 	private void handleFootnotes(Document document) {
 		Elements sups = document.select("sup");
-
+	
+		HashMap<String, String> mapFootnotes = new HashMap<>(); // Initialize the map
+	
 		for (Element sup : sups) {
-			String id = sup.parent().id(); // get the note key,
-
-			sup.text("*"); // Replace each footnote reference symbol with an Asterisk (*) in the body text.
-
-			if (id != null && getJavaScriptFootnotes() == null) { // get the var from javascript just once
-
+			Element parent = sup.parent();
+			String id = "";
+			if (parent != null) {
+				id = parent.id();
+			}
+	
+			sup.text("*");
+	
+			if (id != null && getJavaScriptFootnotes() == null) {
 				Elements scripts = document.select("script");
-				scripts.stream().forEach(script -> { // do a "foreach" using lambda
+	
+				scripts.forEach(script -> {
 					int start = script.toString().indexOf("var footnotes = ");
 					int end = script.toString().indexOf("initFootnotes");
+	
 					if (start > 0) {
 						setJavaScriptFootnotes(script.toString().substring(start + 16, end - 3));
-						return;
 					}
 				});
 			}
 		}
-
+	
 		if (getJavaScriptFootnotes() != null) {
-
-			HashMap<String, String> mapFootnotes = new Gson().fromJson(getJavaScriptFootnotes(),
-					new TypeToken<HashMap<String, String>>() {
-					}.getType());
-
+			mapFootnotes = new Gson().fromJson(getJavaScriptFootnotes(),
+					new TypeToken<HashMap<String, String>>() {}.getType());
+	
 			for (String key : mapFootnotes.keySet()) {
-
-				// extract and set the chapter and verse number
-
 				String noteHtml = "<html><body>" + mapFootnotes.get(key) + "</body></html>";
-				Document documentNoteHtml = getDocFromString(noteHtml);
+				Document documentNoteHtml = Jsoup.parse(noteHtml); // Use Jsoup.parse() instead of getDocFromString()
 				documentNoteHtml.outputSettings().charset("UTF-8");
-
-				// get the Chapter and Verse, and later remove it
+	
 				Element elementFr = documentNoteHtml.selectFirst("span[class=fr]");
-				String[] stringFr = elementFr.text().split("\\.");
-				elementFr.remove();
-
-				// get the footnote
-				Element elementFootnote = documentNoteHtml.selectFirst("div[class=footnote-p]");
-				String stringFootnote = elementFootnote.text();
-
-				// handle with united verses
-				if (stringFr[1].contains("-")) { // united verses
-					String[] unitedVersesFr = stringFr[0].split("-");
-					stringFr[1] = unitedVersesFr[0];
+	
+				if (elementFr != null) { // Check for null before calling .text()
+					String[] stringFr = elementFr.text().split("\\.");
+					elementFr.remove();
+	
+					Element elementFootnote = documentNoteHtml.selectFirst("div[class=footnote-p]");
+					String stringFootnote = elementFootnote.text();
+	
+					if (stringFr[1].contains("-")) {
+						String[] unitedVersesFr = stringFr[0].split("-");
+						stringFr[1] = unitedVersesFr[0];
+					}
+	
+					this.footnotes.add(new Footnote(key, stringFootnote, Integer.parseInt(stringFr[0]),
+							Integer.parseInt(stringFr[1])));
 				}
-
-				this.footnotes.add(new Footnote(key, stringFootnote, Integer.parseInt(stringFr[0]),
-						Integer.parseInt(stringFr[1])));
 			}
 		}
 	}
@@ -592,8 +597,19 @@ public class ParsePage   {
 				int lastVerseNumverInt =Integer.parseInt(lastVerseTemp.text());
 	
 				if (lastVerseNumverInt > totalVersesEnum) {
-					// change the tag of the new verses to sup				
-					verses.last().tagName("sup");
+					// change the tag of the new verses to sup
+					Element versesLast = verses.last();
+					if(versesLast!=null){						
+						versesLast.tagName("sup");
+
+						// remove bold
+						Element versesLastChild = versesLast.firstElementChild();
+						if(versesLastChild!=null && versesLastChild.tagName().equalsIgnoreCase(STRONG)){
+							versesLastChild.tagName(SPAN);
+						}
+						
+					}
+
 				} else if (lastVerseNumverInt < totalVersesEnum) {
 					// complete with new verses
 					
