@@ -6,8 +6,7 @@ It reads the indigenous language translations of the scriptures from the [Script
 - Java 17
 - Spring Boot 2.7.3
 - Vaadin Flow 23
-- Jsoup 1.15
+- Jsoup 1.16
 - Docker
-- Oracle Cloud
 
 
