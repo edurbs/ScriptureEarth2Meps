@@ -396,21 +396,21 @@ public class ParsePage   {
 		 *      add verse number one to the beginning of the first verse, 
 		 *      if it has not been included in the pasted text
 		 */
-		if(spanV != null){
+
+		if(spanV != null) {
 			try {
 				verseNumber = Integer.parseInt(spanV.text());	
-				if(verseNumber == 1){
-					if (totalChapters > 1) {
-						spanV.remove(); // delete verse 1
-					} else if (totalChapters == 1 && spanCDrop != null) {			
-						Element s = new Element(STRONG).text("1");
-						spanCDrop.after(s);	
-					}
-				}				
+				if(verseNumber == 1 && totalChapters > 1) {
+					spanV.remove(); // delete verse 1
+				}
 			} catch (NumberFormatException e){
 
 			} 		
-		}	
+		}
+		if (totalChapters == 1 && spanCDrop != null) {			
+			Element s = new Element(STRONG).text("1");
+			spanCDrop.after(s);	
+		}
 		return spanCDrop;
 	}
 
