@@ -111,10 +111,10 @@ public class ParseBook extends Thread {
 
 			}
 
-			book.getFootnotes().stream().forEach(footnote -> {
+			book.getFootnotes().stream().forEach(footnote -> 
 				book.addHtml("<div>#" + footnote.getChapter() + ":" + footnote.getVerse() + " " + footnote.getNote()
-						+ "</div>");
-			});			
+						+ "</div>")
+			);			
 
 			String fileName = "sbi_" + book.getBookName().getMepsFormat() + ".html";
 			book.setFileName(fileName);
