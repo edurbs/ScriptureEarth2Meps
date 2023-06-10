@@ -80,7 +80,7 @@ public class WebView extends VerticalLayout {
 
 		glotal.setLabel("Glotal character:");
 		glotal.setHelperText("Enter the glottal character of the language.");
-		glotal.setRequired(true);
+		glotal.setRequired(false);
 
 		Collection<Language> languageList = bibleSetup.getLanguageList();
 
@@ -153,7 +153,7 @@ public class WebView extends VerticalLayout {
 		
 		bibleSetup.setShouldStop(false);
 
-		if (!wordSee.getValue().isBlank() && !glotal.getValue().isBlank() && comboLanguages.getValue() != null) {
+		if (!wordSee.getValue().isBlank() && comboLanguages.getValue() != null) {
 
 			if (!bibleSetup.verifyWebBible()) {
 				showMessage("This language " + bibleSetup.getLanguageCode()
@@ -194,7 +194,7 @@ public class WebView extends VerticalLayout {
 			});
 
 		} else {
-			showMessage("Fill in all form fields!");
+			showMessage("Fill form fields!");
 		}
 		buttonStart.setVisible(true);
 	}
