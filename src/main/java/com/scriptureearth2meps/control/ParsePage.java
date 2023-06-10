@@ -391,6 +391,11 @@ public class ParsePage   {
 		Element spanCDrop = document.selectFirst("span[class=c-drop]");
 		int verseNumber = 0;
 
+		/*
+		 * 2.	For books not containing chapters, 
+		 *      add verse number one to the beginning of the first verse, 
+		 *      if it has not been included in the pasted text
+		 */
 		if(spanV != null){
 			try {
 				verseNumber = Integer.parseInt(spanV.text());	
