@@ -37,10 +37,18 @@ public class Footnote {
 		return note;
 	}
 
+	public String getText(){
+		return this.getNote();
+	}
+
 	public void setNote(String note) {
 		this.note = note;
 	}
 
+	public void setText(String text){
+		this.setNote(text);
+	}
+	
 	public int getChapter() {
 		return chapter;
 	}

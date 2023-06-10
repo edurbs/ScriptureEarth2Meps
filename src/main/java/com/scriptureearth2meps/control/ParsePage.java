@@ -26,6 +26,7 @@ public class ParsePage   {
 	private String javaScriptFootnotes = null;
 
 	BibleSetup bibleSetup = null;
+	private String APOSTROPHE = "\u0027";
 
 
 	public ParsePage(BibleSetup bibleSetup, Document document, Book book, int currentChapter) {
@@ -498,12 +499,19 @@ public class ParsePage   {
 	}
 
 	private String changeGlotal(BibleSetup bibleSetup, Document document) {
-		String apostrophe = "\u0027"; 		
+		
 		String glotal = bibleSetup.getGlotal();
+		
+		// replace glotal on footnotes
+		for(Footnote footnote : this.getFootnotes()) {
+			String footnoteText = footnote.getText();
+			String modifiedText = footnoteText.replace(APOSTROPHE, glotal);
+			footnote.setText(modifiedText);
+		}
 		
 		String htmlWithGlotal;
 		if (!glotal.isBlank()) {
-			htmlWithGlotal = document.getElementsByTag("body").html().replace(apostrophe, glotal);			
+			htmlWithGlotal = document.getElementsByTag("body").html().replace(APOSTROPHE, glotal);			
 		}else {
 			htmlWithGlotal = document.getElementsByTag("body").html();
 		}
