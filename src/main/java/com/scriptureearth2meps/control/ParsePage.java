@@ -521,63 +521,31 @@ public class ParsePage   {
 				}
 			}
 
-			addEqualsSign(document);
-
-			// se o ultimo foi div class=p ou span class=p ou div class=m
-			// então adiciona "=" antes do versículo span b class=v (se existir)
-
-			if ((previousElement.selectFirst("div[class=p]") != null
-					|| previousElement.selectFirst("span[class=p]") != null
-					|| previousElement.selectFirst("div[class=m]") != null) 
-					&& divPoetic.firstElementChild() != null
-					&& divPoetic.firstElementChild().className().equals("v")
-					&& divPoetic.selectFirst("b[class=v]") != null) {
-				// if first element is a verse, add = in last block/verse
-				divPoetic.selectFirst("b[class=v]").prependText("=");
-			}
 
 			/*
-			 * Place a Plus sign (+) at the start of a line when body text immediately
-			 * follows poetic text or any type of heading.
-			 */
-			/* 
-			// TODO
+			* Place an Equals sign (=) before the first chapter or verse number where poetic text starts.
+			*  
+			* Note: If a Bible book begins with poetic text, place the Equals sign (=) at the beginning 
+			* of the second verse containing poetic text instead. 
+			* 
+			* If poetic text starts in the middle of a verse, no Equals sign (=) is necessary.
+			*/
 
-			if (nextElement != null) {
-				if (nextElement.selectFirst("div[class=m]") != null 
-						|| nextElement.selectFirst("span[class=p]") != null
-						|| nextElement.selectFirst("div[class=p]") != null
-						|| nextElement.selectFirst("div[class=mt2]") != null
-						|| nextElement.selectFirst("div[class=s2]") != null
-						|| nextElement.selectFirst("div[class=s]") != null
-					) {
-					Element selectFirst = nextElement.selectFirst("b[class=v]");
-					if(selectFirst != null){
-						Element child = selectFirst.child(0);
-						if (child != null) {
-							child.prependText("+"); // add before verse
-						}
-					} else {
-						nextElement.prependText("+");
-					}
+			if(previousElement != null){
+				String previousElementClassName = previousElement.className();
+				Element divPoeticFirstElementChild = divPoetic.firstElementChild();
+				if(divPoeticFirstElementChild != null 
+						&& !previousElementClassName.startsWith("q")
+						&& divPoetic.className().startsWith("q-v")
+				){
+					divPoetic.prependText("=");		
+
 				}
-			}*/
+			}
 
 		}
 	}
 
-
-	/*
-	 * Place an Equals sign (=) before the first chapter or verse number where poetic text starts.
-	 *  
-	 * Note: If a Bible book begins with poetic text, place the Equals sign (=) at the beginning 
-	 * of the second verse containing poetic text instead. 
-	 * 
-	 * If poetic text starts in the middle of a verse, no Equals sign (=) is necessary.
-	 */
-	private void addEqualsSign(Document document) {
-		//TODO
-	}
 
 	private void addDollarSign(Document document, Book book, Element spanCDrop) {
 		if (spanCDrop != null) {
