@@ -70,7 +70,7 @@ public enum BookName {
 	T_2PE("61_2PE", new Integer[] {21,22,18}),
 	T_1JN("62_1JO", new Integer[] {10,29,24,21,21}),
 	T_2JN("63_2JO", new Integer[] {13}),
-	T_3JN("64_3JO", new Integer[] {15}),
+	T_3JN("64_3JO", new Integer[] {14}),
 	T_JUD("65_JUD", new Integer[] {25}),
 	T_REV("66_REV", new Integer[] {20,29,22,11,14,17,17,13,21,11,19,17,18,20,8,21,18,24,21,15,27,21}),
 	ANY(null, new Integer[] {null});
