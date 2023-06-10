@@ -580,12 +580,15 @@ public class ParsePage   {
 		
 		String glotal = bibleSetup.getGlotal();
 		
-		// replace glotal on footnotes
-		for(Footnote footnote : this.getFootnotes()) {
-			String footnoteText = footnote.getText();
-			String modifiedText = footnoteText.replace(APOSTROPHE, glotal);
-			footnote.setText(modifiedText);
-		}
+		String htmlWithGlotal;
+		if (!glotal.isEmpty()) {
+
+			// replace glotal on footnotes
+			for(Footnote footnote : this.getFootnotes()) {
+				String footnoteText = footnote.getText();
+				String modifiedText = footnoteText.replace(APOSTROPHE, glotal);
+				footnote.setText(modifiedText);
+			}
 		
 		String htmlWithGlotal;
 		if (!glotal.isEmpty()) {
