@@ -116,7 +116,7 @@ public class ParseBook extends Thread {
 						+ "</div>")
 			);			
 
-			String fileName = "sbi_" + book.getBookName().getMepsFormat() + ".html";
+			String fileName = book.getBookName().getMepsFormat() + ".html";
 			book.setFileName(fileName);
 
 		} catch (Exception e) {
