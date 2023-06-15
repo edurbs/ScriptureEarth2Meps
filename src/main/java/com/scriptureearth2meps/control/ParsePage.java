@@ -336,7 +336,7 @@ public class ParsePage   {
 						} else{
 
 							Elements nextElementSiblings = verseParent.nextElementSiblings();
-							
+							// TODO pro 6:18
 							outerloop:
 							for (Element nextElementSibling : nextElementSiblings) {
 								Elements nextElementSiblingChildren = nextElementSibling.children();
@@ -344,10 +344,16 @@ public class ParsePage   {
 									if(nextElementSiblingChild != null 
 											&& nextElementSiblingChild.className().equalsIgnoreCase("v")
 									){
-										if(nextElementSibling.parent().className().equalsIgnoreCase("s")) {
-											nextElementSibling.parent().lastElementSibling().before(newVerse);
+										Element lastElementSibling = nextElementSibling.lastElementSibling();
+										String lastElementSiblingClassName = lastElementSibling.className();
+										if(lastElementSiblingClassName.equalsIgnoreCase("s")) {											
+											while(lastElementSiblingClassName.equalsIgnoreCase("s")){ // while is header
+												lastElementSibling = lastElementSibling.lastElementSibling(); // get its last sibling
+											}	
+											lastElementSibling.parent().appendChild(newVerse);
 										}else{
 											nextElementSibling.before(newVerse);
+											//nextElementSibling.appendChild(newVerse);
 										}
 										break outerloop;
 									}
