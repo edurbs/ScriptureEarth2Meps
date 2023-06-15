@@ -291,6 +291,8 @@ public class ParsePage   {
 					}
 				}
 
+				verse.before(newVerse);
+
 				/*
 				 * if there's no more verse in the chapter, add at the end of the div: parent()
 				 * if there no more verse in the chapter, add at the start of the next verse
@@ -317,8 +319,69 @@ public class ParsePage   {
 					}
 				} else { // if there's more verses in the chapter,
 					// add at the start of the next verse number
-					addToNextVerse = newVerse;
-					lastIterator = verse;
+					// addToNextVerse = newVerse;
+					// lastIterator = verse;
+
+					// pega o próximo elemento e procura por class="v", se achar coloca antes dele
+					Element verseParent = verse.parent();
+					if(verseParent != null){
+						
+						Element nextElement = verseParent.nextElementSibling();
+						if (!verseParent.className().startsWith("q") 
+								&& nextElement != null
+								&& !nextElement.className().startsWith("q")
+						) {
+							// add in the next § if it's not poetical
+							verseParent.appendChild(newVerse);							
+						} else{
+
+							Elements nextElementSiblings = verseParent.nextElementSiblings();
+							// TODO pro 6:18
+							outerloop:
+							for (Element nextElementSibling : nextElementSiblings) {
+								Elements nextElementSiblingChildren = nextElementSibling.children();
+								for (Element nextElementSiblingChild : nextElementSiblingChildren) {
+									if(nextElementSiblingChild != null 
+											&& nextElementSiblingChild.className().equalsIgnoreCase("v")
+									){
+										Element lastElementSibling = nextElementSibling.lastElementSibling();
+										String lastElementSiblingClassName = lastElementSibling.className();
+										if(lastElementSiblingClassName.equalsIgnoreCase("s")) {											
+											while(lastElementSiblingClassName.equalsIgnoreCase("s")){ // while is header
+												lastElementSibling = lastElementSibling.lastElementSibling(); // get its last sibling
+											}	
+											lastElementSibling.parent().appendChild(newVerse);
+										}else{
+											nextElementSibling.before(newVerse);
+											//nextElementSibling.appendChild(newVerse);
+										}
+										break outerloop;
+									}
+								}
+							}
+						}
+					}
+
+					
+					// if(verseParent != null){
+					// 	Element nextElement = verseParent.nextElementSibling();
+					// 	if (!verseParent.className().startsWith("q") 
+					// 			&& nextElement != null
+					// 			&& !nextElement.className().startsWith("q")
+					// 	) {
+					// 		// add in the next § if it's not poetical
+					// 		verseParent.appendChild(newVerse);							
+					// 	} else {
+					// 		Elements nextElementSiblings = verseParent.nextElementSiblings();
+					// 		// search for a normal § (not poetical)
+					// 		for (Element nextElementSibling : nextElementSiblings) {
+					// 			if (!nextElementSibling.className().startsWith("q")) {
+					// 				nextElementSibling.appendChild(newVerse);
+					// 				break;
+					// 			}
+					// 		}
+					// 	}
+					// }
 				}
 			}
 			// Make sure that each digit is bold.
@@ -332,7 +395,10 @@ public class ParsePage   {
 		document.getElementById("book-menu").remove();
 		document.getElementById("chapter-menu").remove();
 		document.getElementById("toolbar-top").remove();
-		document.getElementById("toolbar-bottom").remove();
+		var toolbarBotton = document.select("div[id=toolbar-bottom]");
+		if(!toolbarBotton.isEmpty()){
+			toolbarBotton.remove();
+		}
 		document.getElementsByAttributeValue("class", "footer").remove();
 		document.select("span[id^=bookmarks]").remove();
 		document.select("a").remove();
