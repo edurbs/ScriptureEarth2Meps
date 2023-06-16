@@ -121,13 +121,17 @@ public class ParsePage   {
 		handlePoeticText(document);
 
 
-		document.select("script").remove(); // remove scrip here to not break footnotes method
+		document.select("script").remove(); // remove script here to not break footnotes method
 
 		
 		/*
 		 * Change the apostrofe to glotal
 		 */		
 		String htmlWithGlotal = changeGlotal(bibleSetup, document);
+
+		// remove strange caracters
+		htmlWithGlotal = htmlWithGlotal.replace("\uFEFF", "");
+		htmlWithGlotal = htmlWithGlotal.replace("=+", "+=");
 
 		/*
 		 * ================END=================== Append only the body content
@@ -608,10 +612,14 @@ public class ParsePage   {
 			if (previousElement != null && previousElement.lastElementChild() != null) {
 
 				// verifica se o div anterior começa com class=v, se sim finaliza com <br>
-				if (previousElement.lastElementChild().className().equals("v")) {
+				if (previousElement.lastElementChild().className().equals("v")
+						|| previousElement.className().equals("m")
+				) {				
 					previousElement.appendElement("br");
 					previousElement.tagName(SPAN);
 				}
+
+
 			}
 
 
@@ -657,12 +665,19 @@ public class ParsePage   {
 					default -> true;
 				};
 	
-				// if superscription exists, add the sign $ at the start
-				Element divIdD1 = document.selectFirst("div[id=d1]");
-				if (capHasSuper && divIdD1 != null && book.getBookName().ordinal() == 18) {
-					divIdD1.prependText("$");
-	
-					addPlusSignAfterHead(divIdD1.parent());
+				if(capHasSuper && book.getBookName().ordinal() == 18){
+					Element divIdD1 = document.selectFirst("div[id=d1]");
+					// if the superscription exists, add the sign $ at the start of the superscription text
+					if (divIdD1 != null) {
+						divIdD1.prependText("$");		
+						addPlusSignAfterHead(divIdD1.parent());
+					} else{
+						//  if it's a chapther with superscription but the page does not have one, add $ before chapter number
+						Element divSuperscription = new Element("div");
+						divSuperscription.text("$");						
+						spanCDrop.before(divSuperscription);
+					}
+
 				}
 			}
 		}
@@ -730,7 +745,15 @@ public class ParsePage   {
 			for (Element child : children) {
 				child.prependText("@");
 			}
+			addPlusSignAfterHead(header);
+		}
 
+		Elements headersSP = document.select("div[class=sp]");
+		for (Element header : headersSP) {
+			Elements children = header.children();
+			for (Element child : children) {
+				child.prependText("@");
+			}
 			addPlusSignAfterHead(header);
 		}
 
@@ -739,6 +762,21 @@ public class ParsePage   {
 			divClassMt2.firstElementChild().prependText("@");
 
 			addPlusSignAfterHead(divClassMt2);
+		}
+
+		// search for all div class="pc" without a c-drop class inside, and add the sign @, 
+		// but if ti has the c-drop class then move the c-drop to before the class=pc tag
+		
+		Elements divs = document.select("div[class=pc]");
+		for (Element div : divs) {
+			Element cDrop = div.selectFirst("span[class=c-drop]");
+			if (cDrop != null) {				
+				//div.after(cDrop);
+				div.nextElementSibling().before(cDrop);
+				cDrop.prependText("+");
+			} 
+			div.prependText("@");
+			addPlusSignAfterHead(div);
 		}
 	}
 	
@@ -749,23 +787,29 @@ public class ParsePage   {
 	*/
 	private void addPlusSignAfterHead(Element header) {
 		Element nextElement = header.nextElementSibling();
-		// if is not a header
+		// if next element is not a header
 		if (nextElement != null 
 				&& !nextElement.className().equalsIgnoreCase("s") 
 				&& !nextElement.className().equalsIgnoreCase("mt2")) 
 		{
 			Element nextElementChild = nextElement.firstElementChild();
-			// if is a chapter number
-			if(nextElement.className().startsWith("m") 
+			// if is a chapter number or a § from psalm
+			if(nextElement.className().equalsIgnoreCase("m") 
 					&& nextElement.firstElementChild() != null)
 			{
-				if(nextElementChild.className().equalsIgnoreCase("c-drop")){
+				if(nextElementChild.className().equalsIgnoreCase("c-drop")
+						&& !nextElement.text().contains("$")
+				){
 					nextElementChild.prependText("+");
-				}							
+				}else if(!nextElement.text().contains("$")){
+					nextElement.prependText("+");	
+				}
 			// if is a paragraph
-			} else if(nextElement.className().equalsIgnoreCase("p") ){
+			} else if(nextElement.className().equalsIgnoreCase("p") 
+					|| nextElement.className().startsWith("q")
+			){
 				nextElement.prependText("+");
-			}
+			}			
 		}
 	}
 
