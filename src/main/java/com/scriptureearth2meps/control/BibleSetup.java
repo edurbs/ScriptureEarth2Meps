@@ -361,7 +361,7 @@ public class BibleSetup {
 			this.executor.shutdownNow();
 		}
 
-		this.executor = Executors.newFixedThreadPool(3); // parse N books at same time
+		this.executor = Executors.newFixedThreadPool(5); // parse N books at same time
 
 		List<Future<?>> futures = new ArrayList<>();
 
@@ -414,9 +414,9 @@ public class BibleSetup {
 		for (Book book : getBookList()) {
 
 			String html = "<html><head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\"></meta></head>"
-					+ book.getHtml().toString() + "</html>";
-			ByteArrayInputStream bais = new ByteArrayInputStream(html.getBytes());
-
+					+ book.getHtml().toString() + "</html>";		
+			
+			ByteArrayInputStream bais = new ByteArrayInputStream(html.getBytes(StandardCharsets.UTF_8));
 			ZipEntry zipEntry = new ZipEntry(book.getFileName());
 			zipOut.putNextEntry(zipEntry);
 

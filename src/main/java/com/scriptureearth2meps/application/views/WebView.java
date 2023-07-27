@@ -68,7 +68,7 @@ public class WebView extends VerticalLayout {
 		divText.add(textNode);
 		add(divText);
 		
-		Html html =  new Html("<text> Source code avaiable at <a href='https://github.com/edurbs/ScriptureEarth2Meps'>github</a>. If you found a bug, please create an issue there.</text>");
+		Html html =  new Html("<text> Source code avaiable at <a href='https://github.com/edurbs/ScriptureEarth2Meps'>github</a>. If you found a bug, please create an issue there and inform the language.</text>");
 		
 		add(html);
 		
@@ -80,7 +80,7 @@ public class WebView extends VerticalLayout {
 
 		glotal.setLabel("Glotal character:");
 		glotal.setHelperText("Enter the glottal character of the language.");
-		glotal.setRequired(true);
+		glotal.setRequired(false);
 
 		Collection<Language> languageList = bibleSetup.getLanguageList();
 
@@ -153,7 +153,7 @@ public class WebView extends VerticalLayout {
 		
 		bibleSetup.setShouldStop(false);
 
-		if (!wordSee.getValue().isBlank() && !glotal.getValue().isBlank() && comboLanguages.getValue() != null) {
+		if (!wordSee.getValue().isBlank() && comboLanguages.getValue() != null) {
 
 			if (!bibleSetup.verifyWebBible()) {
 				showMessage("This language " + bibleSetup.getLanguageCode()
@@ -182,7 +182,7 @@ public class WebView extends VerticalLayout {
 			progressBarSubLabel.setVisible(true);
 			cancelButton.setVisible(true);
 
-			progressBarLabel.setText("Formating... " + bibleSetup.getBibleCode() + " please wait.");
+			progressBarLabel.setText("Formatting... " + bibleSetup.getBibleCode() + " please wait.");
 
 			bibleSetup.process(this::processingUpdated, this::processingSucceeded);
 
@@ -194,7 +194,7 @@ public class WebView extends VerticalLayout {
 			});
 
 		} else {
-			showMessage("Fill in all form fields!");
+			showMessage("Fill form fields!");
 		}
 		buttonStart.setVisible(true);
 	}
