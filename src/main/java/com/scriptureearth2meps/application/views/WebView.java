@@ -68,7 +68,7 @@ public class WebView extends VerticalLayout {
 		divText.add(textNode);
 		add(divText);
 		
-		Html html =  new Html("<text> Source code avaiable at <a href='https://github.com/edurbs/ScriptureEarth2Meps'>github</a>. If you found a bug, please create an issue there.</text>");
+		Html html =  new Html("<text> Source code avaiable at <a href='https://github.com/edurbs/ScriptureEarth2Meps'>github</a>. If you found a bug, please create an issue there and inform the language.</text>");
 		
 		add(html);
 		

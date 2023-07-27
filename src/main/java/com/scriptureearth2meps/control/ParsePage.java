@@ -551,13 +551,20 @@ public class ParsePage   {
 				Element elementFr = documentNoteHtml.selectFirst("span[class=fr]");
 	
 				if (elementFr != null) { // Check for null before calling .text()
-					String[] stringFr = elementFr.text().split("\\.");
+					String regex = "";
+					if(elementFr.text().contains(":")){
+						regex="\\:";
+					}else{
+						regex="\\.";
+					}
+					String[] stringFr = elementFr.text().split(regex);
 					elementFr.remove();
 	
 					Element elementFootnote = documentNoteHtml.selectFirst("div[class=footnote-p]");
 					String stringFootnote = elementFootnote.text();
-	
-					if (stringFr[1].contains("-")) {
+					
+					
+					if (stringFr.length>1 && stringFr[1].contains("-")) {
 						String[] unitedVersesFr = stringFr[0].split("-");
 						stringFr[1] = unitedVersesFr[0];
 					}
